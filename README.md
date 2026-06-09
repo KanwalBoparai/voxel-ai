@@ -189,6 +189,27 @@ The "Call Outcomes" sheet is created automatically on the first saved call.
 
 ---
 
+## Deploy to the cloud (Render)
+
+The repo includes a [`render.yaml`](render.yaml) blueprint for one-click deployment.
+Deploying gives you a public URL so Vapi can reach the tool webhook during a live call.
+
+1. Go to [dashboard.render.com](https://dashboard.render.com) → **New → Blueprint**.
+2. Connect this GitHub repo — Render reads `render.yaml` and creates the web service.
+3. In the dashboard, fill in the secret env vars (`ANTHROPIC_API_KEY`, and optionally
+   `VAPI_*` and `GOOGLE_*`). The non-secret store details are pre-set in the blueprint.
+4. After the first deploy, copy the service URL (e.g.
+   `https://carpet-voice-agent.onrender.com`), set `APP_BASE_URL` to it, and point your
+   Vapi tools at `{APP_BASE_URL}/tools/vapi`.
+
+The live demo is then at `https://your-service.onrender.com/demo`.
+
+> The free plan filesystem is ephemeral, so local SQLite resets on redeploy — that's
+> fine, because the real CRM (Google Sheets) and calendar (Google Calendar) live
+> externally. Boot is verified against Render's `$PORT` binding and `/health` check.
+
+---
+
 ## What I'd build next
 
 **Post-call SMS follow-up** — after a `booked` outcome, send a confirmation text to the customer with the appointment time. After `interested`, send a reminder that the sale ends Sunday. Both could run from the same `save_call_outcome` webhook without changing the agent logic.
