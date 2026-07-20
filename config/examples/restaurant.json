@@ -1,0 +1,45 @@
+{
+  "business_name": "Ember & Vine",
+  "industry": "restaurant",
+  "tagline": "Wood-fired, farm-sourced, always warm",
+  "agent_name": "Theo",
+  "owner_name": "Chef Marco",
+  "phone": "+15555550199",
+  "email": "reservations@emberandvine.example",
+  "address": "77 Ossington Ave, Toronto, ON",
+  "website": "https://emberandvine.example",
+  "timezone": "America/Toronto",
+  "tone": "warm, upbeat, and hospitable",
+  "greeting_style": "friendly and casual",
+  "services": [
+    { "name": "Dinner reservations", "description": "Tables for 2-8, walk-ins welcome for the bar" },
+    { "name": "Private events", "description": "Semi-private dining room for up to 20 guests" },
+    { "name": "Catering", "description": "Off-site catering for corporate and private events" }
+  ],
+  "faqs": [
+    { "question": "Do you have vegetarian options?", "answer": "Yes, about a third of the menu is vegetarian, and we can adapt several dishes to be vegan on request." },
+    { "question": "Is there parking?", "answer": "Street parking on Ossington, plus a public lot one block north." },
+    { "question": "Do you take walk-ins?", "answer": "Yes for the bar and patio, but the dining room is reservation-only on weekends." }
+  ],
+  "promotion": {
+    "active": true,
+    "headline": "Chef's tasting menu, Sunday–Tuesday",
+    "details": "5-course tasting menu with wine pairing available Sunday through Tuesday evenings."
+  },
+  "booking": {
+    "appointment_label": "reservation",
+    "duration_minutes": 90,
+    "requires_address": false,
+    "location_type": "in_office",
+    "scheduling_link": ""
+  },
+  "hours": {
+    "monday":    { "open": "00:00", "close": "00:00", "closed": true },
+    "tuesday":   { "open": "17:00", "close": "22:00", "closed": false },
+    "wednesday": { "open": "17:00", "close": "22:00", "closed": false },
+    "thursday":  { "open": "17:00", "close": "23:00", "closed": false },
+    "friday":    { "open": "17:00", "close": "23:30", "closed": false },
+    "saturday":  { "open": "16:00", "close": "23:30", "closed": false },
+    "sunday":    { "open": "16:00", "close": "21:00", "closed": false }
+  }
+}

@@ -16,6 +16,7 @@ from app.services.caller import (
 )
 from app.scripts.templates import get_script
 from app.core.config import settings
+from app.core.business_config import business_config
 
 router = APIRouter(prefix="/webhook/call", tags=["webhooks"])
 
@@ -34,11 +35,6 @@ async def _get_call_and_script(call_id: int, db: AsyncSession):
     script = get_script(
         campaign.script_key,
         customer_name=customer.name.split()[0],  # first name only
-        agent_name="Sarah",
-        business_name=settings.BUSINESS_NAME,
-        store_address=settings.STORE_ADDRESS,
-        store_phone=settings.STORE_PHONE,
-        store_website=settings.STORE_WEBSITE,
     )
     return call, customer, campaign, script
 
@@ -162,13 +158,14 @@ async def call_followup(request: Request, call_id: int, db: AsyncSession = Depen
     if digit == "1":
         # Send SMS with store details
         if customer_row:
+            promo_line = f"\n{business_config.promotion.headline} — limited time!" if business_config.promotion.active and business_config.promotion.headline else ""
             sms_body = (
                 f"Hi {customer_row.name.split()[0]}! Here are our details:\n"
-                f"{settings.BUSINESS_NAME}\n"
-                f"{settings.STORE_ADDRESS}\n"
-                f"Tel: {settings.STORE_PHONE}\n"
-                f"Web: {settings.STORE_WEBSITE}\n\n"
-                f"Don't miss our sale — limited time only!"
+                f"{business_config.business_name}\n"
+                f"{business_config.address}\n"
+                f"Tel: {business_config.phone}\n"
+                f"Web: {business_config.website}"
+                f"{promo_line}"
             )
             send_sms(customer_row.phone, sms_body)
         audio_url = await generate_and_cache(script["sms_confirm"], f"sms_{call_id}")
@@ -190,7 +187,7 @@ async def call_followup(request: Request, call_id: int, db: AsyncSession = Depen
         )
         await db.commit()
         return PlainTextResponse(
-            twiml_transfer(audio_url, settings.STORE_PHONE),
+            twiml_transfer(audio_url, business_config.phone),
             media_type="application/xml",
         )
 

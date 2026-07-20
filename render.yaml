@@ -1,14 +1,18 @@
-# Render Blueprint — deploys the voice agent as a public web service.
+# Render Blueprint — deploys Voxel AI as a public web service.
 #
 # How to use:
-#   1. Push this repo to GitHub (already done).
+#   1. Push this repo to GitHub.
 #   2. Go to https://dashboard.render.com → New → Blueprint.
 #   3. Connect this repo. Render reads this file and creates the service.
 #   4. In the dashboard, fill in the secret env vars marked "sync: false" below
-#      (ANTHROPIC_API_KEY, VAPI_*, GOOGLE_*). Non-secret defaults are set here.
+#      (ANTHROPIC_API_KEY, VAPI_*, GOOGLE_*).
 #   5. After the first deploy, copy the service URL (e.g.
-#      https://carpet-voice-agent.onrender.com) and set APP_BASE_URL to it,
-#      then point your Vapi tools at {APP_BASE_URL}/tools/vapi.
+#      https://voxel-ai.onrender.com) and set APP_BASE_URL to it, then point
+#      your Vapi tools at {APP_BASE_URL}/tools/vapi.
+#
+# Business details (name, industry, services, hours, FAQs) come from
+# config/business.json, which is committed with the repo — edit it there or via
+# the dashboard's AI Settings page.
 #
 # Note: the free plan has an ephemeral filesystem, so the local SQLite file
 # resets on redeploy. That's fine — the real CRM (Google Sheets) and calendar
@@ -16,7 +20,7 @@
 
 services:
   - type: web
-    name: carpet-voice-agent
+    name: voxel-ai
     runtime: python
     plan: free
     region: oregon
@@ -34,16 +38,6 @@ services:
       - key: ANTHROPIC_MODEL
         value: claude-opus-4-8
 
-      # --- Store / offer details ---
-      - key: AGENT_NAME
-        value: Sarah
-      - key: BUSINESS_NAME
-        value: Maple Carpet & Flooring
-      - key: OWNER_NAME
-        value: Priya
-      - key: SALE_HEADLINE
-        value: "40% off, this weekend only"
-
       # --- Vapi (for real phone calls) ---
       - key: VAPI_API_KEY
         sync: false
@@ -58,8 +52,6 @@ services:
         sync: false
       - key: GOOGLE_SHEET_ID
         sync: false
-      - key: APPOINTMENT_TIMEZONE
-        value: America/Toronto
 
       # --- Public base URL (set to this service's URL after first deploy) ---
       - key: APP_BASE_URL

@@ -1,0 +1,42 @@
+{
+  "business_name": "Harlow & Reyes Law",
+  "industry": "law firm",
+  "tagline": "Straight answers, no legalese",
+  "agent_name": "Morgan",
+  "owner_name": "Alicia Reyes",
+  "phone": "+15555550188",
+  "email": "intake@harlowreyes.example",
+  "address": "1200 Bay Street, Suite 900, Toronto, ON",
+  "website": "https://harlowreyes.example",
+  "timezone": "America/Toronto",
+  "tone": "professional, calm, and reassuring",
+  "greeting_style": "formal but approachable",
+  "services": [
+    { "name": "Free case consultation", "description": "30-minute intake call to review your situation" },
+    { "name": "Family law", "description": "Divorce, custody, and separation agreements" },
+    { "name": "Real estate closings", "description": "Residential purchase and sale closings" },
+    { "name": "Wills & estates", "description": "Wills, powers of attorney, and estate planning" }
+  ],
+  "faqs": [
+    { "question": "Is the consultation really free?", "answer": "Yes — the first 30-minute consultation is free with no obligation to retain us." },
+    { "question": "How much do you charge?", "answer": "Fees depend on the case type and complexity, which is exactly what the consultation is for — a lawyer will give you a clear quote afterward." },
+    { "question": "Do you offer virtual meetings?", "answer": "Yes, consultations can be in person or by video call." }
+  ],
+  "promotion": { "active": false, "headline": "", "details": "" },
+  "booking": {
+    "appointment_label": "consultation",
+    "duration_minutes": 30,
+    "requires_address": false,
+    "location_type": "virtual",
+    "scheduling_link": ""
+  },
+  "hours": {
+    "monday":    { "open": "09:00", "close": "17:00", "closed": false },
+    "tuesday":   { "open": "09:00", "close": "17:00", "closed": false },
+    "wednesday": { "open": "09:00", "close": "17:00", "closed": false },
+    "thursday":  { "open": "09:00", "close": "17:00", "closed": false },
+    "friday":    { "open": "09:00", "close": "15:00", "closed": false },
+    "saturday":  { "open": "00:00", "close": "00:00", "closed": true },
+    "sunday":    { "open": "00:00", "close": "00:00", "closed": true }
+  }
+}

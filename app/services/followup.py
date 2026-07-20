@@ -10,14 +10,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import FollowUp, FollowUpType, FollowUpStatus, Customer, CallOutcome
 from app.services.caller import send_sms
-from app.core.config import settings
+from app.core.business_config import business_config
 
 
 def _deal_blurb() -> str:
+    promo = business_config.promotion
+    offer_line = f" {promo.headline}." if (promo.active and promo.headline) else ""
+    contact = business_config.website or business_config.phone or business_config.address
     return (
-        f"{settings.BUSINESS_NAME} — don't miss our current sale! "
-        f"Visit us at {settings.STORE_ADDRESS} or {settings.STORE_WEBSITE}. "
-        f"Call {settings.STORE_PHONE} for details."
+        f"{business_config.business_name}.{offer_line} "
+        f"Reach us at {contact}." if contact else f"{business_config.business_name}.{offer_line}"
     )
 
 

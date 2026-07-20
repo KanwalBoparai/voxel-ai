@@ -1,0 +1,45 @@
+{
+  "business_name": "Lumière Hair Studio",
+  "industry": "hair salon",
+  "tagline": "Look good, feel unstoppable",
+  "agent_name": "Chloe",
+  "owner_name": "Nadia Fontaine",
+  "phone": "+15555550244",
+  "email": "book@lumierestudio.example",
+  "address": "220 Queen Street West, Toronto, ON",
+  "website": "https://lumierestudio.example",
+  "timezone": "America/Toronto",
+  "tone": "warm, upbeat, and personable",
+  "greeting_style": "friendly and casual",
+  "services": [
+    { "name": "Cut & style", "description": "Precision cuts for all hair types" },
+    { "name": "Color & balayage", "description": "Full color, balayage, and highlights" },
+    { "name": "Blowout", "description": "Wash and style, no cut" }
+  ],
+  "faqs": [
+    { "question": "Do you take walk-ins?", "answer": "We're appointment-based, but we're happy to fit you in same-day if a slot opens up." },
+    { "question": "How much is a color?", "answer": "It depends on hair length and the look you want — a stylist can quote you exactly when you book." },
+    { "question": "Can I request a specific stylist?", "answer": "Of course — just let us know who you'd like to book with." }
+  ],
+  "promotion": {
+    "active": true,
+    "headline": "20% off first-time color appointments",
+    "details": "New clients get 20% off their first color or balayage service this month."
+  },
+  "booking": {
+    "appointment_label": "appointment",
+    "duration_minutes": 60,
+    "requires_address": false,
+    "location_type": "in_office",
+    "scheduling_link": ""
+  },
+  "hours": {
+    "monday":    { "open": "00:00", "close": "00:00", "closed": true },
+    "tuesday":   { "open": "10:00", "close": "19:00", "closed": false },
+    "wednesday": { "open": "10:00", "close": "19:00", "closed": false },
+    "thursday":  { "open": "10:00", "close": "20:00", "closed": false },
+    "friday":    { "open": "10:00", "close": "20:00", "closed": false },
+    "saturday":  { "open": "09:00", "close": "17:00", "closed": false },
+    "sunday":    { "open": "11:00", "close": "16:00", "closed": false }
+  }
+}

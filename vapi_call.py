@@ -23,32 +23,37 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+sys.path.insert(0, os.path.dirname(__file__))
+from app.core.business_config import business_config  # noqa: E402
+
 VAPI_KEY        = os.getenv("VAPI_API_KEY", "")
 PHONE_NUMBER_ID = os.getenv("VAPI_PHONE_NUMBER_ID", "")
-AGENT_NAME      = os.getenv("AGENT_NAME", "Sarah")
-BUSINESS_NAME   = os.getenv("BUSINESS_NAME", "Maple Carpet & Flooring")
-SALE_HEADLINE   = os.getenv("SALE_HEADLINE", "40% off, this weekend only")
+AGENT_NAME      = business_config.agent_name
+BUSINESS_NAME   = business_config.business_name
 BASE            = "https://api.vapi.ai"
+
+_promo = business_config.promotion
+_offer_fact = f"- Current offer: {_promo.headline}. {_promo.details}".strip() if (_promo.active and _promo.headline) else "- No active promotion — speak generally about our services."
+_label = business_config.booking.appointment_label
 
 SYSTEM_PROMPT = f"""\
 You are {AGENT_NAME}, an AI assistant making an outbound call on behalf of \
-{BUSINESS_NAME}, a small local carpet and flooring store. You are calling a PAST \
-CUSTOMER. Speak only what should be said out loud — nothing else.
+{BUSINESS_NAME}, a {business_config.industry}. You are calling a customer or past \
+customer. Speak only what should be said out loud — nothing else.
 
 THE ONLY FACTS YOU MAY STATE
-- The store is running a sale: exactly 40% off, this weekend only (Saturday and Sunday).
-- The customer can book a free in-home measure — no charge, no obligation.
-- You are calling because they are a past customer.
+{_offer_fact}
+- The customer can book a {_label}.
+- You are calling on behalf of {BUSINESS_NAME}.
 
 DO NOT INVENT
-- No specific prices or dollar figures.
-- No financing, deposits, or payment plans.
-- No product brands, stock levels, or installation timelines.
-- No extra promotions or discounts beyond exactly 40%.
+- No specific prices or dollar figures beyond what's listed above.
+- No financing, deposits, or payment plans not listed above.
+- No product brands, stock levels, staffing, or timelines you don't actually know.
+- No extra promotions or discounts beyond what's listed above.
 - No terms or conditions not listed above.
-If asked about pricing, say: "It depends on room size and product — that's exactly \
-what the free in-home measure is for. They'll give you an exact quote with the 40% \
-already applied, no obligation."
+If asked about pricing, say: "It depends on your specific needs — that's exactly \
+what the {_label} is for. Someone will be able to give you an exact answer, no obligation."
 
 RESPECT THE CUSTOMER
 - "Remove me / don't call again" → stop selling immediately, apologize once, confirm removed.
@@ -68,11 +73,15 @@ def _headers() -> dict:
 
 
 def create_assistant(client: httpx.Client, customer_name: str) -> str:
+    promo_hook = (
+        f"We've got {_promo.headline.lower()} and I wanted to give you a heads up. "
+        if (_promo.active and _promo.headline) else ""
+    )
     first_message = (
         f"Hi{' ' + customer_name if customer_name != 'there' else ''}! "
         f"This is {AGENT_NAME} calling on behalf of {BUSINESS_NAME}. "
-        f"Quick question — have you been thinking about any new flooring? "
-        f"We've got 40% off this weekend only and I wanted to give you a heads up."
+        f"{promo_hook}"
+        f"Do you have a quick moment?"
     )
     payload = {
         "name": f"{AGENT_NAME} — {BUSINESS_NAME}",

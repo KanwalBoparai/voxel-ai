@@ -18,7 +18,7 @@ router = APIRouter(prefix="/api", tags=["campaigns"])
 
 class CampaignCreate(BaseModel):
     name: str
-    script_key: str  # "sale_40_percent" or "bogo_carpet"
+    script_key: str = "default"  # keypad-flow script key (see app/scripts/templates.py)
 
 
 class CampaignResponse(BaseModel):
@@ -101,9 +101,9 @@ async def list_customers(db: AsyncSession = Depends(get_db)):
 
 @router.post("/campaigns")
 async def create_campaign(data: CampaignCreate, db: AsyncSession = Depends(get_db)):
-    valid_scripts = ["sale_40_percent", "bogo_carpet"]
-    if data.script_key not in valid_scripts:
-        raise HTTPException(400, f"script_key must be one of: {valid_scripts}")
+    from app.scripts.templates import SCRIPTS
+    if data.script_key not in SCRIPTS:
+        raise HTTPException(400, f"script_key must be one of: {list(SCRIPTS)}")
 
     campaign = Campaign(name=data.name, script_key=data.script_key)
     db.add(campaign)

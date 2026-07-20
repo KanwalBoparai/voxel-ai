@@ -1,13 +1,18 @@
 """
-Google Calendar: check available slots and book free in-home measure appointments.
+Google Calendar: check available slots and book appointments.
 
 Setup required (see .env.example):
   GOOGLE_SERVICE_ACCOUNT_FILE  — path to a service-account JSON key file, OR
   GOOGLE_SERVICE_ACCOUNT_JSON  — the JSON content as a single env-var string
   GOOGLE_CALENDAR_ID           — the calendar ID to read/write
-  APPOINTMENT_TIMEZONE         — e.g. America/Toronto
+
+Timezone comes from config/business.json (business_config.timezone), not an env var.
 
 The service account must have "Make changes to events" permission on the calendar.
+
+Available hours come from config/business.json (business_config.hours) instead
+of being hardcoded, so this works for any business — weekday clinics, weekend-only
+pop-ups, evening restaurants, and everything in between.
 """
 
 import asyncio
@@ -18,39 +23,47 @@ from typing import Optional
 from zoneinfo import ZoneInfo
 
 from app.core.config import settings
+from app.core.business_config import business_config
 
-SLOT_HOURS = list(range(9, 17))   # 9 AM – 4 PM start (last slot ends at 5 PM)
 SLOT_DURATION = timedelta(hours=1)
 
+_WEEKDAYS = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
+
 _TIME_RANGES = {
-    "morning":   list(range(9, 12)),
-    "afternoon": list(range(12, 17)),
+    "morning":   range(0, 12),
+    "afternoon": range(12, 17),
+    "evening":   range(17, 24),
 }
 
 
 # ── helpers ──────────────────────────────────────────────────────────────────
 
-def _weekend_dates() -> tuple[date, date]:
-    """Return (Saturday, Sunday) for the current or upcoming weekend."""
-    today = datetime.now().date()
-    wd = today.weekday()          # 0=Mon … 5=Sat, 6=Sun
-    if wd <= 4:                   # Mon–Fri: next Saturday
-        sat = today + timedelta(days=5 - wd)
-    elif wd == 5:                 # Saturday: today
-        sat = today
-    else:                         # Sunday: yesterday
-        sat = today - timedelta(days=1)
-    return sat, sat + timedelta(days=1)
-
-
 def _day_to_date(day_str: str) -> Optional[date]:
-    sat, sun = _weekend_dates()
-    d = day_str.lower()
-    if "sat" in d:
-        return sat
-    if "sun" in d:
-        return sun
+    """Resolve a spoken day ('today', 'tomorrow', or a weekday name) to the next such date."""
+    today = datetime.now().date()
+    d = (day_str or "").strip().lower()
+    if "today" in d:
+        return today
+    if "tomorrow" in d:
+        return today + timedelta(days=1)
+    for i, name in enumerate(_WEEKDAYS):
+        if name in d or name[:3] in d:
+            delta = (i - today.weekday()) % 7
+            return today + timedelta(days=delta)
     return None
+
+
+def _hours_for(target: date) -> Optional[tuple[int, int]]:
+    """Return (open_hour, close_hour) for this date's weekday, or None if closed."""
+    day_hours = business_config.hours.get(_WEEKDAYS[target.weekday()])
+    if day_hours is None or day_hours.closed:
+        return None
+    try:
+        open_h = int(day_hours.open.split(":")[0])
+        close_h = int(day_hours.close.split(":")[0])
+    except (ValueError, IndexError):
+        return None
+    return open_h, close_h
 
 
 def _credentials():
@@ -86,14 +99,19 @@ def _check_slots_sync(preferred_day: str, preferred_time_range: str) -> dict:
     if svc is None or not settings.GOOGLE_CALENDAR_ID:
         return {
             "available_slots": [],
-            "note": "Calendar not configured — note the customer's preference so the store can confirm.",
+            "note": "Calendar not configured — note the customer's preference so the business can confirm.",
         }
 
     target = _day_to_date(preferred_day)
     if target is None:
         return {"available_slots": [], "error": f"Unrecognised day: {preferred_day!r}"}
 
-    tz = ZoneInfo(settings.APPOINTMENT_TIMEZONE)
+    business_hours = _hours_for(target)
+    if business_hours is None:
+        return {"available_slots": [], "note": f"We're closed on {target.strftime('%A')} — offer a different day."}
+    open_h, close_h = business_hours
+
+    tz = ZoneInfo(business_config.timezone)
     day_start = datetime(target.year, target.month, target.day, 0, 0, tzinfo=tz)
     day_end   = day_start + timedelta(days=1)
 
@@ -113,11 +131,11 @@ def _check_slots_sync(preferred_day: str, preferred_time_range: str) -> dict:
         except ValueError:
             pass
 
-    allowed = SLOT_HOURS
+    allowed = list(range(open_h, close_h))
     trange = (preferred_time_range or "").lower()
     for key, hrs in _TIME_RANGES.items():
         if key in trange or trange in key:
-            allowed = hrs
+            allowed = [h for h in allowed if h in hrs]
             break
 
     day_label = target.strftime("%A")
@@ -159,7 +177,7 @@ def _book_sync(
     if svc is None or not settings.GOOGLE_CALENDAR_ID:
         return {
             "booked": False,
-            "note": "Calendar not configured — the store will confirm the appointment directly.",
+            "note": "Calendar not configured — the business will confirm the appointment directly.",
         }
 
     target = _day_to_date(appointment_date)
@@ -171,7 +189,7 @@ def _book_sync(
         return {"booked": False, "error": f"Unrecognised time: {appointment_time!r}"}
     hour, minute = parsed
 
-    tz = ZoneInfo(settings.APPOINTMENT_TIMEZONE)
+    tz = ZoneInfo(business_config.timezone)
     start_dt = datetime(target.year, target.month, target.day, hour, minute, tzinfo=tz)
     end_dt   = start_dt + SLOT_DURATION
 
@@ -185,17 +203,18 @@ def _book_sync(
     if conflicts:
         return {"booked": False, "error": "That slot was just taken — please offer another time."}
 
+    label = business_config.booking.appointment_label.title()
     event = {
-        "summary": f"Free Measure Appointment - {customer_name}",
+        "summary": f"{label} - {customer_name}",
         "description": (
-            f"Customer interested in Maple Carpet & Flooring's 40% off weekend sale.\n"
+            f"Booked via {business_config.business_name}'s AI voice agent.\n"
             f"Phone: {customer_phone}\n"
-            f"Address: {customer_address}\n"
+            f"Address: {customer_address or 'N/A'}\n"
             f"Notes: {notes or 'None'}\n"
             f"Outcome: Booked"
         ),
-        "start": {"dateTime": start_dt.isoformat(), "timeZone": settings.APPOINTMENT_TIMEZONE},
-        "end":   {"dateTime": end_dt.isoformat(),   "timeZone": settings.APPOINTMENT_TIMEZONE},
+        "start": {"dateTime": start_dt.isoformat(), "timeZone": business_config.timezone},
+        "end":   {"dateTime": end_dt.isoformat(),   "timeZone": business_config.timezone},
     }
     created = svc.events().insert(calendarId=settings.GOOGLE_CALENDAR_ID, body=event).execute()
     return {
@@ -221,12 +240,12 @@ async def check_available_slots(
     )
 
 
-async def book_measure_appointment(
+async def book_appointment(
     customer_name: str,
     customer_phone: str,
     appointment_date: str,
     appointment_time: str,
-    customer_address: str,
+    customer_address: str = "",
     notes: str = "",
 ) -> dict:
     loop = asyncio.get_event_loop()

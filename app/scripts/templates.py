@@ -1,34 +1,46 @@
 """
-Call script templates. Each script_key maps to a set of messages the agent speaks.
-All {placeholders} are filled at call time from customer/campaign data.
-"""
+Call script templates for the keypad (DTMF) outbound flow (app/api/webhooks.py).
 
-SCRIPTS = {
-    "sale_40_percent": {
+This is the simpler, legacy call flow — press 1/2/3 instead of a live
+conversation. The script is generated from the business config (name, promotion,
+services, address) instead of being hardcoded per-business, so any business can
+use it by editing config/business.json.
+"""
+from app.core.business_config import business_config
+
+
+def _default_script() -> dict:
+    biz = business_config.business_name
+    agent = business_config.agent_name
+    promo = business_config.promotion
+    address = business_config.address or "our location"
+
+    if promo.active and promo.headline:
+        offer_line = f"I'm reaching out because {promo.headline.lower()}. "
+    else:
+        offer_line = "I'm reaching out to share what's new with us. "
+
+    return {
         "intro": (
             "Hello, may I speak with {customer_name}? "
-            "Hi {customer_name}! This is {agent_name} calling from {business_name}. "
+            f"Hi {{customer_name}}! This is {agent} calling from {biz}. "
             "I hope I'm not catching you at a bad time. "
-            "I'm reaching out because we have an amazing sale happening this weekend only — "
-            "40 percent off on all our premium carpets. "
-            "This is one of our biggest discounts of the year and we wanted to make sure our valued customers heard about it first. "
-            "Press 1 to hear more about the sale, "
+            f"{offer_line}"
+            "Press 1 to hear more, "
             "press 2 if you'd like us to call you at a better time, "
             "or press 3 to be removed from our call list."
         ),
         "more_info": (
-            "Our 40 percent off sale includes all carpet styles — "
-            "from luxury wool to modern synthetics, and everything in between. "
-            "The sale runs this Friday through Sunday at {store_address}. "
-            "We also offer free in-home measurement and professional installation. "
-            "Press 1 to get our store address sent to you by text, "
-            "press 2 to speak with one of our carpet experts right now, "
-            "press 3 to book an in-store visit, "
+            f"{promo.details or 'We would love to help you out.'} "
+            f"You can find us at {address}. "
+            "Press 1 to get our details by text, "
+            "press 2 to speak with someone on our team right now, "
+            "press 3 to book a visit, "
             "or press 9 to end this call."
         ),
         "book_confirm": (
-            "Perfect! We've booked you an in-store visit and we'll text you the details. "
-            "We can't wait to help you find the perfect carpet, {customer_name}! Goodbye."
+            "Perfect! We've booked your visit and we'll text you the details. "
+            "We can't wait to help you, {customer_name}! Goodbye."
         ),
         "callback": (
             "No problem at all! We'll give you a call back at a more convenient time. "
@@ -39,73 +51,28 @@ SCRIPTS = {
             "Thank you for your time, {customer_name}, and have a great day!"
         ),
         "sms_confirm": (
-            "Great! We'll send our store details to this number right away. "
-            "We look forward to seeing you, {customer_name}! Goodbye."
+            "Great! We'll send our details to this number right away. "
+            "We look forward to hearing from you, {customer_name}! Goodbye."
         ),
         "transfer": (
-            "Wonderful! Please hold for just a moment while I connect you with one of our carpet specialists. "
+            "Wonderful! Please hold for just a moment while I connect you with someone from our team. "
             "They'll be happy to answer all your questions!"
         ),
         "no_input": (
             "I'm sorry, I didn't catch that. "
-            "Press 1 to hear about our sale, press 2 for a callback, or press 9 to end this call."
+            "Press 1 to hear more, press 2 for a callback, or press 9 to end this call."
         ),
         "goodbye": (
             "Thank you for your time, {customer_name}. Have a wonderful day! Goodbye."
         ),
-    },
+    }
 
-    "bogo_carpet": {
-        "intro": (
-            "Hello, may I speak with {customer_name}? "
-            "Hi {customer_name}! This is {agent_name} calling from {business_name}. "
-            "I have some exciting news — we're running a buy one get one free promotion on selected carpet ranges this week. "
-            "That means when you purchase one carpet, you get a second one absolutely free! "
-            "Press 1 to hear more, "
-            "press 2 for a callback at a better time, "
-            "or press 3 to opt out of future calls."
-        ),
-        "more_info": (
-            "Our buy one get one free offer applies to our entire mid-range carpet collection — "
-            "perfect for bedrooms, living rooms, and hallways. "
-            "The offer is valid in-store at {store_address} until this Sunday. "
-            "Press 1 to get our details by text, "
-            "press 2 to speak with a specialist, "
-            "press 3 to book an in-store visit, "
-            "or press 9 to end the call."
-        ),
-        "book_confirm": (
-            "Excellent! Your in-store visit is booked and we'll text you the details. "
-            "See you soon, {customer_name}! Goodbye."
-        ),
-        "callback": (
-            "Of course! We'll call you back at a better time. "
-            "Thanks so much, {customer_name}. Have a great day!"
-        ),
-        "opt_out": (
-            "Not a problem at all. We'll take you off our list immediately. "
-            "Thank you, {customer_name}, and have a wonderful day!"
-        ),
-        "sms_confirm": (
-            "Perfect! Check your texts shortly for our store info. "
-            "We hope to see you soon, {customer_name}! Goodbye."
-        ),
-        "transfer": (
-            "Brilliant! Hold on just a second while I connect you with a specialist who can help you choose the perfect carpet!"
-        ),
-        "no_input": (
-            "Sorry about that — I didn't get a response. "
-            "Press 1 to learn about the offer, press 2 for a callback, or press 9 to end this call."
-        ),
-        "goodbye": (
-            "Thanks for your time, {customer_name}. Have a lovely day! Goodbye."
-        ),
-    },
-}
+
+# script_key is kept for backward compatibility with existing campaigns/tests —
+# every key currently resolves to the same config-driven script.
+SCRIPTS = {"default": _default_script()}
 
 
 def get_script(script_key: str, **kwargs) -> dict:
-    template = SCRIPTS.get(script_key)
-    if not template:
-        raise ValueError(f"Unknown script key: {script_key}")
+    template = SCRIPTS.get(script_key) or SCRIPTS["default"]
     return {k: v.format(**kwargs) for k, v in template.items()}

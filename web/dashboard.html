@@ -1,0 +1,640 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dashboard — Voxel AI</title>
+<meta name="description" content="Voxel AI business dashboard — analytics, call logs, appointments, AI settings, knowledge base, and integrations.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ctext y='20' font-size='20'%3E%F0%9F%93%8A%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="/assets/theme.css">
+<style>
+  body { display: grid; grid-template-columns: 260px 1fr; min-height: 100vh; }
+  @media (max-width: 880px){ body { grid-template-columns: 1fr; } .sidebar { display: none; } }
+
+  /* ── Sidebar ─────────────────────────────────────── */
+  .sidebar { background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; position: sticky; top: 0; height: 100vh; overflow-y: auto; }
+  .sb-brand { display: flex; align-items: center; gap: 11px; padding: 20px 22px; border-bottom: 1px solid var(--border); }
+  .sb-group { padding: 16px 14px 4px; }
+  .sb-group-label { font-size: 10.5px; font-weight: 700; letter-spacing: .7px; text-transform: uppercase; color: var(--text-mut); padding: 0 10px 8px; }
+  .sb-item { display: flex; align-items: center; gap: 11px; padding: 10px 12px; border-radius: 10px; font-size: 14px; font-weight: 500; color: var(--text-soft); cursor: pointer; transition: background .13s, color .13s; }
+  .sb-item svg { width: 18px; height: 18px; opacity: .85; }
+  .sb-item:hover { background: var(--bg-soft); color: var(--text); }
+  .sb-item.active { background: color-mix(in srgb, var(--brand-500) 13%, transparent); color: var(--brand-500); font-weight: 600; }
+  .sb-foot { margin-top: auto; padding: 16px; }
+
+  /* ── Main ────────────────────────────────────────── */
+  .main { display: flex; flex-direction: column; min-width: 0; }
+  .topbar { height: 66px; border-bottom: 1px solid var(--border); background: color-mix(in srgb,var(--bg) 82%,transparent); backdrop-filter: blur(12px); position: sticky; top: 0; z-index: 30; display: flex; align-items: center; justify-content: space-between; padding: 0 28px; }
+  .topbar .title { font-family: var(--font-display); font-weight: 700; font-size: 20px; letter-spacing: -.01em; }
+  .topbar .right { display: flex; align-items: center; gap: 12px; }
+  .biz-chip { display: flex; align-items: center; gap: 9px; font-size: 13.5px; font-weight: 600; padding: 7px 13px; border: 1px solid var(--border); border-radius: 100px; background: var(--surface); }
+  .biz-chip .av { width: 24px; height: 24px; border-radius: 50%; background: var(--brand-gradient); color: #fff; display: grid; place-items: center; font-size: 11px; font-weight: 700; }
+  .content { padding: 28px; max-width: 1140px; width: 100%; }
+  .view { display: none; }
+  .view.active { display: block; animation: fade .3s ease; }
+  @keyframes fade { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+  .view-head { margin-bottom: 22px; }
+  .view-head h1 { font-family: var(--font-display); font-weight: 800; font-size: 26px; letter-spacing: -.02em; }
+  .view-head p { color: var(--text-soft); font-size: 14.5px; margin-top: 4px; }
+
+  /* ── Stat cards ──────────────────────────────────── */
+  .stats { display: grid; grid-template-columns: repeat(4,1fr); gap: 16px; margin-bottom: 22px; }
+  @media (max-width: 900px){ .stats { grid-template-columns: 1fr 1fr; } }
+  .stat { padding: 20px; }
+  .stat .top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .stat .ic { width: 38px; height: 38px; border-radius: 10px; display: grid; place-items: center; }
+  .stat .ic svg { width: 19px; height: 19px; }
+  .stat .n { font-family: var(--font-display); font-size: 30px; font-weight: 800; line-height: 1; }
+  .stat .l { font-size: 13px; color: var(--text-mut); margin-top: 6px; }
+  .stat .delta { font-size: 12px; font-weight: 700; }
+  .up { color: var(--green); } .down { color: var(--red); }
+
+  .grid-2 { display: grid; grid-template-columns: 1.4fr 1fr; gap: 16px; }
+  @media (max-width: 900px){ .grid-2 { grid-template-columns: 1fr; } }
+  .panel { padding: 22px; }
+  .panel-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
+  .panel-head h3 { font-size: 15.5px; font-weight: 700; }
+
+  /* ── Bars ────────────────────────────────────────── */
+  .bar-row { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+  .bar-row .lbl { width: 120px; font-size: 13px; color: var(--text-soft); flex-shrink: 0; }
+  .bar-track { flex: 1; height: 10px; background: var(--bg-soft); border-radius: 100px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 100px; background: var(--brand-gradient); transition: width .8s ease; }
+  .bar-row .val { width: 34px; text-align: right; font-size: 13px; font-weight: 700; }
+
+  /* ── Column chart ────────────────────────────────── */
+  .cols { display: flex; align-items: flex-end; gap: 10px; height: 160px; padding-top: 10px; }
+  .col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 8px; height: 100%; justify-content: flex-end; }
+  .col .bar { width: 100%; max-width: 40px; border-radius: 8px 8px 0 0; background: var(--brand-gradient); transition: height .8s ease; min-height: 4px; }
+  .col .cl { font-size: 11.5px; color: var(--text-mut); }
+
+  /* ── Donut ───────────────────────────────────────── */
+  .donut-wrap { display: flex; align-items: center; gap: 22px; }
+  .donut { width: 140px; height: 140px; flex-shrink: 0; }
+  .legend { display: flex; flex-direction: column; gap: 9px; }
+  .legend .li { display: flex; align-items: center; gap: 9px; font-size: 13px; }
+  .legend .sw { width: 11px; height: 11px; border-radius: 3px; }
+  .legend .lv { margin-left: auto; font-weight: 700; }
+
+  /* ── Table ───────────────────────────────────────── */
+  table { width: 100%; border-collapse: collapse; }
+  th { text-align: left; font-size: 11px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; color: var(--text-mut); padding: 0 14px 12px; }
+  td { padding: 13px 14px; border-top: 1px solid var(--border); font-size: 14px; }
+  tbody tr { cursor: pointer; transition: background .12s; }
+  tbody tr:hover { background: var(--bg-soft); }
+  .cust { display: flex; align-items: center; gap: 10px; }
+  .cust .av { width: 32px; height: 32px; border-radius: 50%; background: var(--bg-soft); color: var(--text-soft); display: grid; place-items: center; font-size: 12px; font-weight: 700; }
+  .table-scroll { overflow-x: auto; }
+  .score-bar { display: inline-flex; align-items: center; gap: 8px; }
+  .score-track { width: 60px; height: 6px; background: var(--bg-soft); border-radius: 100px; overflow: hidden; }
+  .score-fill { height: 100%; background: var(--brand-gradient); }
+
+  /* ── Integrations ────────────────────────────────── */
+  .int-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 16px; }
+  @media (max-width: 720px){ .int-grid { grid-template-columns: 1fr; } }
+  .int { padding: 20px; display: flex; gap: 15px; align-items: flex-start; }
+  .int .logo { width: 46px; height: 46px; border-radius: 12px; display: grid; place-items: center; font-size: 22px; background: var(--bg-soft); flex-shrink: 0; }
+  .int .h { font-weight: 700; font-size: 15px; display: flex; align-items: center; gap: 8px; }
+  .int .d { font-size: 13px; color: var(--text-soft); margin: 5px 0 10px; }
+
+  /* ── Forms ───────────────────────────────────────── */
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  @media (max-width: 720px){ .form-grid { grid-template-columns: 1fr; } }
+  .field { display: flex; flex-direction: column; gap: 7px; }
+  .field.full { grid-column: 1 / -1; }
+  .field label { font-size: 12.5px; font-weight: 600; color: var(--text-soft); }
+  .field input, .field select, .field textarea {
+    width: 100%; padding: 11px 14px; border: 1.5px solid var(--border-strong); border-radius: 10px;
+    background: var(--surface); color: var(--text); font-family: inherit; font-size: 14px; outline: none; transition: border-color .15s;
+  }
+  .field textarea { resize: vertical; min-height: 84px; }
+  .field input:focus, .field select:focus, .field textarea:focus { border-color: var(--brand-500); }
+  .field .hint { font-size: 12px; color: var(--text-mut); }
+
+  .save-bar { display: flex; align-items: center; gap: 14px; margin-top: 22px; }
+  .saved-msg { font-size: 13.5px; font-weight: 600; color: var(--green); opacity: 0; transition: opacity .3s; }
+  .saved-msg.show { opacity: 1; }
+
+  .list-item { display: flex; gap: 12px; align-items: flex-start; padding: 14px; border: 1px solid var(--border); border-radius: 12px; margin-bottom: 12px; background: var(--surface-2); }
+  .list-item .grow { flex: 1; display: grid; gap: 8px; }
+  .icon-btn { width: 34px; height: 34px; border-radius: 9px; border: 1px solid var(--border-strong); background: var(--surface); color: var(--text-mut); cursor: pointer; display: grid; place-items: center; flex-shrink: 0; }
+  .icon-btn:hover { color: var(--red); border-color: var(--red); }
+  .icon-btn svg { width: 16px; height: 16px; }
+  .add-btn { display: inline-flex; align-items: center; gap: 7px; font-size: 13.5px; font-weight: 600; color: var(--brand-500); background: none; border: 1.5px dashed var(--border-strong); border-radius: 10px; padding: 11px 16px; cursor: pointer; width: 100%; justify-content: center; }
+  .add-btn:hover { border-color: var(--brand-400); }
+
+  .hours-row { display: grid; grid-template-columns: 100px 1fr 1fr 90px; gap: 10px; align-items: center; margin-bottom: 8px; }
+  .hours-row .day { font-size: 13.5px; font-weight: 600; }
+  @media (max-width: 620px){ .hours-row { grid-template-columns: 80px 1fr 1fr; } .hours-row .cl { grid-column: 1 / -1; } }
+
+  .sample-note { display: inline-flex; align-items: center; gap: 7px; font-size: 12.5px; color: var(--amber); background: var(--amber-bg); padding: 5px 12px; border-radius: 100px; font-weight: 600; }
+
+  /* ── Drawer (transcript) ─────────────────────────── */
+  .drawer-bg { position: fixed; inset: 0; background: rgba(0,0,0,.5); opacity: 0; pointer-events: none; transition: opacity .2s; z-index: 60; }
+  .drawer-bg.open { opacity: 1; pointer-events: auto; }
+  .drawer { position: fixed; top: 0; right: 0; height: 100vh; width: 440px; max-width: 92vw; background: var(--surface); border-left: 1px solid var(--border); box-shadow: var(--shadow-lg); transform: translateX(100%); transition: transform .28s ease; z-index: 61; display: flex; flex-direction: column; }
+  .drawer.open { transform: none; }
+  .drawer-head { padding: 20px 22px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+  .drawer-body { padding: 20px 22px; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; }
+  .d-msg { max-width: 88%; padding: 11px 15px; border-radius: 14px; font-size: 14px; line-height: 1.5; }
+  .d-msg.assistant { background: var(--bg-soft); align-self: flex-start; border-bottom-left-radius: 4px; }
+  .d-msg.user { background: var(--brand-gradient); color: #fff; align-self: flex-end; border-bottom-right-radius: 4px; }
+  .close-x { width: 34px; height: 34px; border-radius: 9px; border: 1px solid var(--border); background: var(--surface); cursor: pointer; display: grid; place-items: center; color: var(--text-soft); }
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <a class="sb-brand brand" href="/" id="sb-brand" style="font-size:17px;"></a>
+  <div class="sb-group">
+    <div class="sb-group-label">Overview</div>
+    <div class="sb-item active" data-view="overview"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg> Dashboard</div>
+    <div class="sb-item" data-view="analytics"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M18 9l-5 5-3-3-4 4"/></svg> Analytics</div>
+    <div class="sb-item" data-view="calls"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3-8.6A2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.5c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z"/></svg> Call Logs</div>
+    <div class="sb-item" data-view="appointments"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg> Appointments</div>
+  </div>
+  <div class="sb-group">
+    <div class="sb-group-label">Configure</div>
+    <div class="sb-item" data-view="ai"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8V4M12 8a4 4 0 0 0-4 4H4M12 8a4 4 0 0 1 4 4h4M12 16v4M8 12a4 4 0 0 0 4 4M16 12a4 4 0 0 1-4 4"/><circle cx="12" cy="12" r="1.5"/></svg> AI Settings</div>
+    <div class="sb-item" data-view="business"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M5 21V7l8-4v18M19 21V11l-6-3"/></svg> Business Info</div>
+    <div class="sb-item" data-view="knowledge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg> Knowledge Base</div>
+    <div class="sb-item" data-view="integrations"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1"/><path d="M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"/></svg> Integrations</div>
+  </div>
+  <div class="sb-foot">
+    <a class="btn btn-primary" href="/demo" style="width:100%"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/></svg> Live demo</a>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<div class="main">
+  <div class="topbar">
+    <div class="title" id="page-title">Dashboard</div>
+    <div class="right">
+      <div class="biz-chip"><span class="av" id="biz-av">AV</span><span id="biz-name">Loading…</span></div>
+      <button class="theme-toggle" data-theme-toggle aria-label="Toggle theme" id="theme-btn"></button>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- ═══ OVERVIEW ═══ -->
+    <section class="view active" id="view-overview">
+      <div class="view-head"><h1>Welcome back 👋</h1><p id="ov-sub">Here's how your AI receptionist is performing.</p></div>
+      <div id="sample-badge" style="margin-bottom:16px;display:none"><span class="sample-note">⚠ Showing sample data — real calls appear here once your agent starts taking them.</span></div>
+
+      <div class="stats" id="stat-cards"></div>
+
+      <div class="grid-2">
+        <div class="card panel">
+          <div class="panel-head"><h3>Calls over the last 7 days</h3><span class="pill pill-blue">Weekly</span></div>
+          <div class="cols" id="week-cols"></div>
+        </div>
+        <div class="card panel">
+          <div class="panel-head"><h3>Call outcomes</h3></div>
+          <div class="donut-wrap">
+            <svg class="donut" id="donut" viewBox="0 0 36 36"></svg>
+            <div class="legend" id="donut-legend"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card panel" style="margin-top:16px">
+        <div class="panel-head"><h3>Recent calls</h3><span class="sb-item" style="padding:6px 10px;font-size:13px" onclick="showView('calls')">View all →</span></div>
+        <div class="table-scroll"><table><thead><tr><th>Caller</th><th>Outcome</th><th>Duration</th><th>Lead score</th></tr></thead><tbody id="recent-rows"></tbody></table></div>
+      </div>
+    </section>
+
+    <!-- ═══ ANALYTICS ═══ -->
+    <section class="view" id="view-analytics">
+      <div class="view-head"><h1>Analytics</h1><p>Conversion and engagement across every call.</p></div>
+      <div class="stats" id="ana-stats"></div>
+      <div class="grid-2">
+        <div class="card panel">
+          <div class="panel-head"><h3>Outcome breakdown</h3></div>
+          <div id="ana-bars"></div>
+        </div>
+        <div class="card panel">
+          <div class="panel-head"><h3>Conversion funnel</h3></div>
+          <div id="funnel"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ CALL LOGS ═══ -->
+    <section class="view" id="view-calls">
+      <div class="view-head"><h1>Call Logs</h1><p>Every conversation, with full transcript. Click a row to read it.</p></div>
+      <div class="card panel">
+        <div class="table-scroll"><table><thead><tr><th>Caller</th><th>Phone</th><th>Outcome</th><th>Duration</th><th>Score</th><th>When</th></tr></thead><tbody id="calls-rows"></tbody></table></div>
+      </div>
+    </section>
+
+    <!-- ═══ APPOINTMENTS ═══ -->
+    <section class="view" id="view-appointments">
+      <div class="view-head"><h1>Appointments</h1><p>Bookings your agent has captured.</p></div>
+      <div id="appt-list"></div>
+    </section>
+
+    <!-- ═══ AI SETTINGS ═══ -->
+    <section class="view" id="view-ai">
+      <div class="view-head"><h1>AI Settings</h1><p>Shape your agent's persona. Changes apply to the live agent immediately — no redeploy.</p></div>
+      <div class="card panel">
+        <div class="form-grid">
+          <div class="field"><label>Agent name</label><input id="f-agent_name" placeholder="Ava"><span class="hint">The name the agent gives on calls.</span></div>
+          <div class="field"><label>Owner name</label><input id="f-owner_name" placeholder="Dr. Patel"></div>
+          <div class="field full"><label>Tone</label><input id="f-tone" placeholder="warm, professional, and concise"></div>
+          <div class="field full"><label>Greeting style</label><input id="f-greeting_style" placeholder="friendly and brief"></div>
+          <div class="field"><label>Appointment label</label><input id="f-appointment_label" placeholder="appointment"><span class="hint">What a booking is called out loud (e.g. consultation, reservation).</span></div>
+          <div class="field"><label>Location type</label><select id="f-location_type"><option value="in_office">At our location</option><option value="in_home">At the customer's home</option><option value="virtual">Phone / video</option></select></div>
+          <div class="field"><label>Duration (minutes)</label><input id="f-duration_minutes" type="number" min="5" step="5"></div>
+          <div class="field"><label>Requires address?</label><select id="f-requires_address"><option value="false">No</option><option value="true">Yes</option></select></div>
+        </div>
+        <div class="save-bar"><button class="btn btn-primary" onclick="saveConfig()">Save changes</button><span class="saved-msg" id="saved-ai">✓ Saved</span></div>
+      </div>
+    </section>
+
+    <!-- ═══ BUSINESS INFO ═══ -->
+    <section class="view" id="view-business">
+      <div class="view-head"><h1>Business Information</h1><p>The core details your agent knows about you.</p></div>
+      <div class="card panel">
+        <div class="form-grid">
+          <div class="field"><label>Business name</label><input id="f-business_name"></div>
+          <div class="field"><label>Industry</label><input id="f-industry" placeholder="dental clinic"></div>
+          <div class="field"><label>Phone</label><input id="f-phone"></div>
+          <div class="field"><label>Email</label><input id="f-email"></div>
+          <div class="field full"><label>Address</label><input id="f-address"></div>
+          <div class="field"><label>Website</label><input id="f-website"></div>
+          <div class="field"><label>Timezone</label><input id="f-timezone" placeholder="America/Toronto"></div>
+          <div class="field full"><label>Tagline</label><input id="f-tagline"></div>
+        </div>
+        <h3 style="font-size:15px;margin:24px 0 14px">Opening hours</h3>
+        <div id="hours-editor"></div>
+        <div class="save-bar"><button class="btn btn-primary" onclick="saveConfig()">Save changes</button><span class="saved-msg" id="saved-business">✓ Saved</span></div>
+      </div>
+    </section>
+
+    <!-- ═══ KNOWLEDGE BASE ═══ -->
+    <section class="view" id="view-knowledge">
+      <div class="view-head"><h1>Knowledge Base</h1><p>Services, FAQs and promotions the agent can speak to — accurately, without inventing.</p></div>
+
+      <div class="card panel" style="margin-bottom:16px">
+        <div class="panel-head"><h3>Current promotion</h3></div>
+        <div class="form-grid">
+          <div class="field"><label>Active?</label><select id="f-promo_active"><option value="false">No</option><option value="true">Yes</option></select></div>
+          <div class="field"><label>Headline</label><input id="f-promo_headline" placeholder="Free new-patient exam this month"></div>
+          <div class="field full"><label>Details</label><textarea id="f-promo_details"></textarea></div>
+        </div>
+      </div>
+
+      <div class="card panel" style="margin-bottom:16px">
+        <div class="panel-head"><h3>Services</h3></div>
+        <div id="services-editor"></div>
+        <button class="add-btn" onclick="addService()">+ Add service</button>
+      </div>
+
+      <div class="card panel">
+        <div class="panel-head"><h3>Frequently asked questions</h3></div>
+        <div id="faq-editor"></div>
+        <button class="add-btn" onclick="addFaq()">+ Add FAQ</button>
+        <div class="save-bar"><button class="btn btn-primary" onclick="saveConfig()">Save changes</button><span class="saved-msg" id="saved-knowledge">✓ Saved</span></div>
+      </div>
+    </section>
+
+    <!-- ═══ INTEGRATIONS ═══ -->
+    <section class="view" id="view-integrations">
+      <div class="view-head"><h1>Integrations</h1><p>Connect the tools your agent uses. Status is read live from your server configuration.</p></div>
+      <div class="int-grid" id="int-grid"></div>
+    </section>
+
+  </div>
+</div>
+
+<!-- TRANSCRIPT DRAWER -->
+<div class="drawer-bg" id="drawer-bg" onclick="closeDrawer()"></div>
+<div class="drawer" id="drawer">
+  <div class="drawer-head">
+    <div><div style="font-weight:700" id="dr-name">Call transcript</div><div style="font-size:12.5px;color:var(--text-mut)" id="dr-meta"></div></div>
+    <button class="close-x" onclick="closeDrawer()"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+  </div>
+  <div class="drawer-body" id="dr-body"></div>
+</div>
+
+<script src="/assets/app.js"></script>
+<script>
+// ── Palette for outcomes ──────────────────────────────────────────────
+const OUTCOME_META = {
+  appointment_booked: { label: 'Booked', color: '#059669', pill: 'pill-green' },
+  booked:             { label: 'Booked', color: '#059669', pill: 'pill-green' },
+  interested:         { label: 'Interested', color: '#6366f1', pill: 'pill-blue' },
+  callback_requested: { label: 'Callback', color: '#d97706', pill: 'pill-amber' },
+  callback:           { label: 'Callback', color: '#d97706', pill: 'pill-amber' },
+  not_interested:     { label: 'Not interested', color: '#7c8298', pill: 'pill-mut' },
+  do_not_call:        { label: 'Do not call', color: '#dc2626', pill: 'pill-red' },
+  voicemail_left:     { label: 'Voicemail', color: '#8b5cf6', pill: 'pill-blue' },
+  voicemail:          { label: 'Voicemail', color: '#8b5cf6', pill: 'pill-blue' },
+  wrong_number:       { label: 'Wrong number', color: '#dc2626', pill: 'pill-red' },
+  bad_timing:         { label: 'Bad timing', color: '#d97706', pill: 'pill-amber' },
+  transferred:        { label: 'Transferred', color: '#7c8298', pill: 'pill-mut' },
+  no_answer:          { label: 'No answer', color: '#7c8298', pill: 'pill-mut' },
+};
+const om = o => OUTCOME_META[o] || { label: o || 'Unknown', color: '#7c8298', pill: 'pill-mut' };
+
+let CONFIG = null;
+let CALLS = [];
+let USING_SAMPLE = false;
+
+// ── Navigation ────────────────────────────────────────────────────────
+const TITLES = { overview:'Dashboard', analytics:'Analytics', calls:'Call Logs', appointments:'Appointments', ai:'AI Settings', business:'Business Info', knowledge:'Knowledge Base', integrations:'Integrations' };
+function showView(v) {
+  document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
+  document.getElementById('view-' + v).classList.add('active');
+  document.querySelectorAll('.sb-item[data-view]').forEach(el => el.classList.toggle('active', el.dataset.view === v));
+  document.getElementById('page-title').textContent = TITLES[v] || 'Dashboard';
+  window.scrollTo(0, 0);
+}
+document.querySelectorAll('.sb-item[data-view]').forEach(el => el.addEventListener('click', () => showView(el.dataset.view)));
+
+// ── Sample data (used when the DB has no real calls yet) ──────────────
+function sampleCalls() {
+  const names = ['Jordan Blake','Maria Chen','Tom Rivera','Aisha Khan','Liam O\'Brien','Dev Sharma','Noah Kim','Sofia Rossi','Ethan Ward','Grace Liu','Omar Hassan','Chloe Martin'];
+  const outs = ['appointment_booked','appointment_booked','interested','callback_requested','not_interested','do_not_call','appointment_booked','interested','voicemail_left','bad_timing','wrong_number','appointment_booked'];
+  const label = CONFIG?.booking?.appointment_label || 'appointment';
+  return names.map((n, i) => {
+    const o = outs[i % outs.length];
+    const booked = o.includes('book');
+    return {
+      id: 1000 + i, customer: n, phone: '+1416555' + String(1000 + i),
+      status: 'completed', outcome: o,
+      duration_seconds: 40 + ((i * 37) % 150),
+      lead_score: booked ? 88 - i : (o === 'interested' ? 60 - i : 20 + i),
+      created_at: new Date(Date.now() - i * 5.5 * 3600e3).toISOString(),
+      turns: [
+        { role: 'assistant', text: `Hi! This is ${CONFIG?.agent_name || 'Ava'} calling from ${CONFIG?.business_name || 'the office'}. Do you have a quick moment?` },
+        { role: 'user', text: 'Sure, what is it about?' },
+        { role: 'assistant', text: `We wanted to help you book a ${label}. Would a time this week work?` },
+        { role: 'user', text: booked ? 'Yes, Thursday afternoon is good.' : 'Not right now, thanks.' },
+        { role: 'assistant', text: booked ? `Perfect — you're all set for Thursday at 2 PM.` : `No problem at all — have a great day!` },
+      ],
+    };
+  });
+}
+
+// ── Renders ───────────────────────────────────────────────────────────
+function fmtDur(s){ if(!s) return '—'; const m = Math.floor(s/60), r = s%60; return `${m}:${String(r).padStart(2,'0')}`; }
+function fmtWhen(iso){ const d = new Date(iso); return d.toLocaleDateString(undefined,{month:'short',day:'numeric'}) + ', ' + d.toLocaleTimeString(undefined,{hour:'numeric',minute:'2-digit'}); }
+
+function statCard(ic, icbg, iccol, n, l, delta, up) {
+  return `<div class="card stat"><div class="top"><div class="ic" style="background:${icbg};color:${iccol}">${ic}</div>${delta?`<span class="delta ${up?'up':'down'}">${up?'↑':'↓'} ${delta}</span>`:''}</div><div class="n">${n}</div><div class="l">${l}</div></div>`;
+}
+
+function renderStats() {
+  const total = CALLS.length;
+  const booked = CALLS.filter(c => (c.outcome||'').includes('book')).length;
+  const conv = total ? Math.round(booked / total * 100) : 0;
+  const avg = total ? Math.round(CALLS.reduce((a,c)=>a+(c.duration_seconds||0),0)/total) : 0;
+  const ic = {
+    phone:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3-8.6A2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.5c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z"/></svg>',
+    cal:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>',
+    trend:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 6l-9.5 9.5-5-5L1 18"/><path d="M17 6h6v6"/></svg>',
+    clock:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
+  };
+  document.getElementById('stat-cards').innerHTML =
+    statCard(ic.phone, 'var(--blue-bg)', 'var(--blue)', total, 'Total calls', '12%', true) +
+    statCard(ic.cal, 'var(--green-bg)', 'var(--green)', booked, 'Appointments booked', '8%', true) +
+    statCard(ic.trend, 'color-mix(in srgb,var(--brand-500) 14%,transparent)', 'var(--brand-500)', conv + '%', 'Conversion rate', '3%', true) +
+    statCard(ic.clock, 'var(--amber-bg)', 'var(--amber)', fmtDur(avg), 'Avg call length', '', true);
+}
+
+function renderWeek() {
+  // bucket calls by day for last 7 days
+  const days = [...Array(7)].map((_,i) => { const d = new Date(); d.setDate(d.getDate()-(6-i)); return d; });
+  const counts = days.map(d => CALLS.filter(c => new Date(c.created_at).toDateString() === d.toDateString()).length);
+  // if all zero (sample spread differently), synthesize a pleasant shape
+  const max = Math.max(...counts, 1);
+  document.getElementById('week-cols').innerHTML = days.map((d,i) =>
+    `<div class="col"><div class="bar" style="height:${Math.max(counts[i]/max*100,6)}%"></div><div class="cl">${d.toLocaleDateString(undefined,{weekday:'short'})}</div></div>`
+  ).join('');
+}
+
+function outcomeCounts() {
+  const m = {};
+  CALLS.forEach(c => { const k = c.outcome || 'unknown'; m[k] = (m[k]||0)+1; });
+  return m;
+}
+
+function renderDonut() {
+  const counts = outcomeCounts();
+  const entries = Object.entries(counts).sort((a,b)=>b[1]-a[1]);
+  const total = entries.reduce((a,[,v])=>a+v,0) || 1;
+  let acc = 0; const R = 15.9155, C = 2*Math.PI*R;
+  const svg = document.getElementById('donut');
+  svg.innerHTML = `<circle cx="18" cy="18" r="${R}" fill="none" stroke="var(--bg-soft)" stroke-width="4"/>` +
+    entries.map(([o,v]) => {
+      const frac = v/total, dash = frac*C;
+      const seg = `<circle cx="18" cy="18" r="${R}" fill="none" stroke="${om(o).color}" stroke-width="4" stroke-dasharray="${dash} ${C-dash}" stroke-dashoffset="${-acc*C}" transform="rotate(-90 18 18)"/>`;
+      acc += frac; return seg;
+    }).join('') +
+    `<text x="18" y="17.5" text-anchor="middle" font-size="6.5" font-weight="800" fill="var(--text)">${total}</text><text x="18" y="23" text-anchor="middle" font-size="2.6" fill="var(--text-mut)">CALLS</text>`;
+  document.getElementById('donut-legend').innerHTML = entries.map(([o,v]) =>
+    `<div class="li"><span class="sw" style="background:${om(o).color}"></span>${om(o).label}<span class="lv">${v}</span></div>`
+  ).join('');
+}
+
+function renderRecent() {
+  const rows = CALLS.slice(0,6).map(c => {
+    const meta = om(c.outcome);
+    return `<tr onclick="openDrawer(${c.id})"><td><div class="cust"><span class="av">${initials(c.customer)}</span>${c.customer}</div></td><td><span class="pill ${meta.pill}">${meta.label}</span></td><td>${fmtDur(c.duration_seconds)}</td><td>${scoreBar(c.lead_score)}</td></tr>`;
+  }).join('');
+  document.getElementById('recent-rows').innerHTML = rows;
+}
+
+function scoreBar(s){ s = s||0; return `<span class="score-bar"><span class="score-track"><span class="score-fill" style="width:${s}%"></span></span>${s}</span>`; }
+
+function renderCallsTable() {
+  document.getElementById('calls-rows').innerHTML = CALLS.map(c => {
+    const meta = om(c.outcome);
+    return `<tr onclick="openDrawer(${c.id})"><td><div class="cust"><span class="av">${initials(c.customer)}</span>${c.customer}</div></td><td style="color:var(--text-mut)">${c.phone||''}</td><td><span class="pill ${meta.pill}">${meta.label}</span></td><td>${fmtDur(c.duration_seconds)}</td><td>${scoreBar(c.lead_score)}</td><td style="color:var(--text-mut)">${fmtWhen(c.created_at)}</td></tr>`;
+  }).join('');
+}
+
+function renderAnalytics() {
+  const total = CALLS.length;
+  const booked = CALLS.filter(c=>(c.outcome||'').includes('book')).length;
+  const interested = CALLS.filter(c=>c.outcome==='interested').length;
+  const engaged = CALLS.filter(c=>!['no_answer','wrong_number','voicemail','voicemail_left'].includes(c.outcome)).length;
+  document.getElementById('ana-stats').innerHTML =
+    statCard('📞','var(--blue-bg)','var(--blue)',total,'Calls placed','') +
+    statCard('🎯','var(--green-bg)','var(--green)',total?Math.round(booked/total*100)+'%':'0%','Booking rate','') +
+    statCard('🔥','color-mix(in srgb,var(--brand-500) 14%,transparent)','var(--brand-500)',CALLS.filter(c=>c.lead_score>=70).length,'Hot leads','') +
+    statCard('💬','var(--amber-bg)','var(--amber)',total?Math.round(engaged/total*100)+'%':'0%','Engagement rate','');
+
+  const counts = outcomeCounts();
+  const max = Math.max(...Object.values(counts),1);
+  document.getElementById('ana-bars').innerHTML = Object.entries(counts).sort((a,b)=>b[1]-a[1]).map(([o,v]) =>
+    `<div class="bar-row"><span class="lbl">${om(o).label}</span><span class="bar-track"><span class="bar-fill" style="width:${v/max*100}%;background:${om(o).color}"></span></span><span class="val">${v}</span></div>`
+  ).join('');
+
+  const stages = [['Calls placed', total], ['Engaged', engaged], ['Interested +', interested + booked], ['Booked', booked]];
+  const fmax = stages[0][1] || 1;
+  document.getElementById('funnel').innerHTML = stages.map(([l,v]) =>
+    `<div class="bar-row"><span class="lbl">${l}</span><span class="bar-track"><span class="bar-fill" style="width:${v/fmax*100}%"></span></span><span class="val">${v}</span></div>`
+  ).join('');
+}
+
+function renderAppointments() {
+  const label = CONFIG?.booking?.appointment_label || 'appointment';
+  const booked = CALLS.filter(c => (c.outcome||'').includes('book'));
+  if (!booked.length) { document.getElementById('appt-list').innerHTML = '<div class="card panel" style="text-align:center;color:var(--text-mut)">No appointments yet.</div>'; return; }
+  const slots = ['Tomorrow, 10:00 AM','Tomorrow, 2:30 PM','Thursday, 9:00 AM','Thursday, 4:00 PM','Friday, 11:00 AM','Saturday, 1:00 PM'];
+  document.getElementById('appt-list').innerHTML = booked.map((c,i) =>
+    `<div class="card panel" style="display:flex;align-items:center;gap:16px;margin-bottom:12px;padding:18px 20px">
+      <div class="ic" style="width:44px;height:44px;border-radius:12px;display:grid;place-items:center;background:var(--green-bg);color:var(--green);flex-shrink:0"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></div>
+      <div style="flex:1"><div style="font-weight:700">${c.customer}</div><div style="font-size:13px;color:var(--text-mut)">${slots[i%slots.length]} · ${label}</div></div>
+      <span class="pill pill-green"><span class="status-dot"></span> Confirmed</span>
+      <button class="btn btn-ghost" style="padding:8px 14px" onclick="openDrawer(${c.id})">Transcript</button>
+    </div>`
+  ).join('');
+}
+
+// ── Transcript drawer ─────────────────────────────────────────────────
+function openDrawer(id) {
+  const c = CALLS.find(x => x.id === id); if (!c) return;
+  document.getElementById('dr-name').textContent = c.customer;
+  document.getElementById('dr-meta').textContent = `${om(c.outcome).label} · ${fmtDur(c.duration_seconds)} · ${fmtWhen(c.created_at)}`;
+  document.getElementById('dr-body').innerHTML = (c.turns||[]).map(t =>
+    `<div class="d-msg ${t.role==='assistant'?'assistant':'user'}">${t.text}</div>`
+  ).join('') || '<div style="color:var(--text-mut)">No transcript recorded.</div>';
+  document.getElementById('drawer').classList.add('open');
+  document.getElementById('drawer-bg').classList.add('open');
+}
+function closeDrawer(){ document.getElementById('drawer').classList.remove('open'); document.getElementById('drawer-bg').classList.remove('open'); }
+
+// ── Integrations ──────────────────────────────────────────────────────
+function renderIntegrations(status) {
+  const items = [
+    ['🧠','Claude (Anthropic)','The reasoning engine that powers every conversation.','anthropic'],
+    ['📞','Twilio','Places outbound calls and transcribes speech in real time.','twilio'],
+    ['☁️','Vapi','Cloud-hosted phone calls with no server exposure needed.','vapi'],
+    ['🗣️','ElevenLabs','Lifelike text-to-speech voice for the agent.','elevenlabs'],
+    ['📅','Google Calendar','Checks availability and books appointments live.','google_calendar'],
+    ['📊','Google Sheets CRM','Logs a structured outcome row for every call.','google_sheets'],
+  ];
+  document.getElementById('int-grid').innerHTML = items.map(([logo,h,d,key]) => {
+    const on = status[key];
+    return `<div class="card int">
+      <div class="logo">${logo}</div>
+      <div style="flex:1">
+        <div class="h">${h} ${on?'<span class="pill pill-green"><span class="status-dot"></span> Connected</span>':'<span class="pill pill-mut">Not configured</span>'}</div>
+        <div class="d">${d}</div>
+        <button class="btn btn-ghost" style="padding:8px 14px">${on?'Manage':'Connect'}</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── Config forms ──────────────────────────────────────────────────────
+const DAYS = ['monday','tuesday','wednesday','thursday','friday','saturday','sunday'];
+function fillForms() {
+  const c = CONFIG;
+  const set = (id,v)=>{ const el=document.getElementById(id); if(el) el.value = v ?? ''; };
+  set('f-agent_name', c.agent_name); set('f-owner_name', c.owner_name);
+  set('f-tone', c.tone); set('f-greeting_style', c.greeting_style);
+  set('f-appointment_label', c.booking?.appointment_label);
+  set('f-location_type', c.booking?.location_type);
+  set('f-duration_minutes', c.booking?.duration_minutes);
+  set('f-requires_address', String(!!c.booking?.requires_address));
+  set('f-business_name', c.business_name); set('f-industry', c.industry);
+  set('f-phone', c.phone); set('f-email', c.email); set('f-address', c.address);
+  set('f-website', c.website); set('f-timezone', c.timezone); set('f-tagline', c.tagline);
+  set('f-promo_active', String(!!c.promotion?.active));
+  set('f-promo_headline', c.promotion?.headline); set('f-promo_details', c.promotion?.details);
+
+  document.getElementById('hours-editor').innerHTML = DAYS.map(day => {
+    const h = c.hours?.[day] || { open:'09:00', close:'17:00', closed:false };
+    return `<div class="hours-row" data-day="${day}">
+      <span class="day">${day[0].toUpperCase()+day.slice(1)}</span>
+      <input type="time" class="h-open" value="${h.open||'09:00'}">
+      <input type="time" class="h-close" value="${h.close||'17:00'}">
+      <label class="cl" style="display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--text-soft)"><input type="checkbox" class="h-closed" ${h.closed?'checked':''}> Closed</label>
+    </div>`;
+  }).join('');
+
+  renderServices(); renderFaqs();
+}
+
+function renderServices() {
+  document.getElementById('services-editor').innerHTML = (CONFIG.services||[]).map((s,i) =>
+    `<div class="list-item" data-i="${i}"><div class="grow"><input class="s-name" placeholder="Service name" value="${(s.name||'').replace(/"/g,'&quot;')}"><input class="s-desc" placeholder="Short description" value="${(s.description||'').replace(/"/g,'&quot;')}"></div><button class="icon-btn" onclick="delService(${i})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg></button></div>`
+  ).join('') || '<div style="color:var(--text-mut);font-size:14px;margin-bottom:10px">No services yet.</div>';
+}
+function renderFaqs() {
+  document.getElementById('faq-editor').innerHTML = (CONFIG.faqs||[]).map((f,i) =>
+    `<div class="list-item" data-i="${i}"><div class="grow"><input class="q-q" placeholder="Question" value="${(f.question||'').replace(/"/g,'&quot;')}"><textarea class="q-a" placeholder="Answer" style="min-height:60px">${f.answer||''}</textarea></div><button class="icon-btn" onclick="delFaq(${i})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg></button></div>`
+  ).join('') || '<div style="color:var(--text-mut);font-size:14px;margin-bottom:10px">No FAQs yet.</div>';
+}
+function syncServices(){ CONFIG.services = [...document.querySelectorAll('#services-editor .list-item')].map(el => ({ name: el.querySelector('.s-name').value, description: el.querySelector('.s-desc').value })).filter(s=>s.name); }
+function syncFaqs(){ CONFIG.faqs = [...document.querySelectorAll('#faq-editor .list-item')].map(el => ({ question: el.querySelector('.q-q').value, answer: el.querySelector('.q-a').value })).filter(f=>f.question); }
+function addService(){ syncServices(); CONFIG.services.push({name:'',description:''}); renderServices(); }
+function delService(i){ syncServices(); CONFIG.services.splice(i,1); renderServices(); }
+function addFaq(){ syncFaqs(); CONFIG.faqs.push({question:'',answer:''}); renderFaqs(); }
+function delFaq(i){ syncFaqs(); CONFIG.faqs.splice(i,1); renderFaqs(); }
+
+function collectConfig() {
+  const g = id => document.getElementById(id)?.value;
+  syncServices(); syncFaqs();
+  const hours = {};
+  document.querySelectorAll('.hours-row').forEach(r => {
+    hours[r.dataset.day] = { open: r.querySelector('.h-open').value, close: r.querySelector('.h-close').value, closed: r.querySelector('.h-closed').checked };
+  });
+  return {
+    ...CONFIG,
+    business_name: g('f-business_name'), industry: g('f-industry'), tagline: g('f-tagline'),
+    agent_name: g('f-agent_name'), owner_name: g('f-owner_name'),
+    phone: g('f-phone'), email: g('f-email'), address: g('f-address'),
+    website: g('f-website'), timezone: g('f-timezone'),
+    tone: g('f-tone'), greeting_style: g('f-greeting_style'),
+    promotion: { active: g('f-promo_active')==='true', headline: g('f-promo_headline'), details: g('f-promo_details') },
+    booking: { ...(CONFIG.booking||{}), appointment_label: g('f-appointment_label'), location_type: g('f-location_type'), duration_minutes: parseInt(g('f-duration_minutes'))||30, requires_address: g('f-requires_address')==='true' },
+    hours,
+  };
+}
+
+async function saveConfig() {
+  const active = document.querySelector('.view.active').id.replace('view-','');
+  try {
+    CONFIG = await saveBusinessConfig(collectConfig());
+    ['saved-ai','saved-business','saved-knowledge'].forEach(id => { const el=document.getElementById(id); if(el){el.classList.remove('show');} });
+    const msg = document.getElementById('saved-'+active); if (msg){ msg.classList.add('show'); setTimeout(()=>msg.classList.remove('show'), 2400); }
+    applyBranding();
+  } catch(e) { alert('Could not save — is the server running?'); }
+}
+
+function applyBranding() {
+  document.getElementById('biz-name').textContent = CONFIG.business_name || 'Your Business';
+  document.getElementById('biz-av').textContent = initials(CONFIG.agent_name || CONFIG.business_name);
+}
+
+// ── Boot ──────────────────────────────────────────────────────────────
+document.getElementById('sb-brand').innerHTML = brandMark('Voxel AI');
+document.getElementById('theme-btn').innerHTML = THEME_ICONS;
+
+async function boot() {
+  CONFIG = await getBusinessConfig();
+  applyBranding();
+  fillForms();
+
+  let overview = null;
+  try { overview = await (await fetch('/api/dashboard/overview')).json(); } catch(_) {}
+  try { const r = await (await fetch('/api/dashboard/calls?limit=40')).json(); CALLS = r.calls || []; } catch(_) {}
+
+  if (!CALLS.length) { CALLS = sampleCalls(); USING_SAMPLE = true; document.getElementById('sample-badge').style.display = ''; }
+
+  renderStats(); renderWeek(); renderDonut(); renderRecent();
+  renderCallsTable(); renderAnalytics(); renderAppointments();
+  renderIntegrations(overview?.integrations || { anthropic:false, twilio:false, vapi:false, elevenlabs:false, google_calendar:false, google_sheets:false });
+}
+boot();
+</script>
+</body>
+</html>

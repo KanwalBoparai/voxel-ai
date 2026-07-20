@@ -79,7 +79,7 @@ class Campaign(Base):
     name = Column(String(150), nullable=False)
     script_key = Column(String(50), nullable=False)        # default/fallback script
     # Phase 2: A/B testing — list of script keys to split traffic across
-    script_variants = Column(JSON, default=list)           # e.g. ["sale_40_percent", "bogo_carpet"]
+    script_variants = Column(JSON, default=list)           # e.g. ["default", "no_promo_variant"]
     active = Column(Boolean, default=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 

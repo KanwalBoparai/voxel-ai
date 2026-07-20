@@ -1,0 +1,45 @@
+{
+  "business_name": "Coastal Comfort Heating & Air",
+  "industry": "HVAC company",
+  "tagline": "Comfort, restored fast",
+  "agent_name": "Riley",
+  "owner_name": "Sam Coastal",
+  "phone": "+15555550233",
+  "email": "dispatch@coastalcomfort.example",
+  "address": "88 Industrial Pkwy, Mississauga, ON",
+  "website": "https://coastalcomfort.example",
+  "timezone": "America/Toronto",
+  "tone": "practical, reassuring, and efficient",
+  "greeting_style": "friendly and to the point",
+  "services": [
+    { "name": "Emergency repair", "description": "Same-day service for no heat / no cooling calls" },
+    { "name": "Furnace & AC installation", "description": "Free in-home quote for full system replacement" },
+    { "name": "Seasonal maintenance", "description": "Tune-ups to keep your system running efficiently" }
+  ],
+  "faqs": [
+    { "question": "How fast can someone come out?", "answer": "For emergencies like no heat or no cooling, we aim for same-day service." },
+    { "question": "How much does a new system cost?", "answer": "It depends on your home's size and current setup — that's exactly what the free in-home quote covers, no obligation." },
+    { "question": "Do you offer financing?", "answer": "A technician can go over financing options during your in-home quote." }
+  ],
+  "promotion": {
+    "active": true,
+    "headline": "Free in-home quote on new system installs",
+    "details": "Book a free, no-obligation in-home quote for a new furnace or AC system this month."
+  },
+  "booking": {
+    "appointment_label": "in-home quote",
+    "duration_minutes": 60,
+    "requires_address": true,
+    "location_type": "in_home",
+    "scheduling_link": ""
+  },
+  "hours": {
+    "monday":    { "open": "07:00", "close": "18:00", "closed": false },
+    "tuesday":   { "open": "07:00", "close": "18:00", "closed": false },
+    "wednesday": { "open": "07:00", "close": "18:00", "closed": false },
+    "thursday":  { "open": "07:00", "close": "18:00", "closed": false },
+    "friday":    { "open": "07:00", "close": "18:00", "closed": false },
+    "saturday":  { "open": "08:00", "close": "14:00", "closed": false },
+    "sunday":    { "open": "00:00", "close": "00:00", "closed": true }
+  }
+}

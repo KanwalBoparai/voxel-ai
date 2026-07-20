@@ -1,0 +1,377 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Voxel AI — Your AI Receptionist, for any business</title>
+<meta name="description" content="Voxel AI is a configurable AI voice agent that answers calls, books appointments, and captures leads for any business — dental, legal, real estate, restaurants, home services and more.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ctext y='20' font-size='20'%3E%F0%9F%8E%99%EF%B8%8F%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="/assets/theme.css">
+<style>
+  /* ── Nav ─────────────────────────────────────────── */
+  nav.top {
+    position: sticky; top: 0; z-index: 40;
+    background: color-mix(in srgb, var(--bg) 82%, transparent);
+    backdrop-filter: saturate(180%) blur(14px);
+    border-bottom: 1px solid var(--border);
+  }
+  nav.top .inner { display: flex; align-items: center; justify-content: space-between; height: 66px; }
+  .nav-links { display: flex; align-items: center; gap: 30px; }
+  .nav-links a.link { font-size: 14.5px; font-weight: 500; color: var(--text-soft); transition: color .15s; }
+  .nav-links a.link:hover { color: var(--text); }
+  .nav-right { display: flex; align-items: center; gap: 12px; }
+  @media (max-width: 860px) { .nav-links .link { display: none; } }
+
+  /* ── Hero ────────────────────────────────────────── */
+  .hero { position: relative; overflow: hidden; padding: 84px 0 60px; text-align: center; }
+  .hero::before {
+    content: ''; position: absolute; inset: -30% 0 auto 0; height: 720px;
+    background: radial-gradient(60% 60% at 50% 0%, color-mix(in srgb, var(--brand-500) 20%, transparent), transparent 70%);
+    pointer-events: none; z-index: 0;
+  }
+  .hero .container { position: relative; z-index: 1; }
+  .hero h1 {
+    font-family: var(--font-display); font-weight: 800; letter-spacing: -.03em;
+    font-size: clamp(38px, 6vw, 68px); line-height: 1.04; margin: 22px auto 20px; max-width: 900px;
+  }
+  .hero h1 .grad {
+    background: var(--brand-gradient); -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .hero p.sub { font-size: clamp(16px, 2.2vw, 20px); color: var(--text-soft); max-width: 620px; margin: 0 auto; }
+  .hero-cta { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; margin-top: 34px; }
+  .hero-trust { margin-top: 26px; font-size: 13px; color: var(--text-mut); display: flex; gap: 22px; justify-content: center; flex-wrap: wrap; }
+  .hero-trust span { display: inline-flex; align-items: center; gap: 7px; }
+  .hero-trust svg { width: 15px; height: 15px; color: var(--green); }
+
+  /* ── Hero preview panel ──────────────────────────── */
+  .hero-preview {
+    margin: 56px auto 0; max-width: 940px; border-radius: var(--radius-lg);
+    border: 1px solid var(--border); background: var(--surface);
+    box-shadow: var(--shadow-lg); overflow: hidden;
+  }
+  .hp-bar { display: flex; align-items: center; gap: 8px; padding: 13px 18px; border-bottom: 1px solid var(--border); background: var(--surface-2); }
+  .hp-dot { width: 11px; height: 11px; border-radius: 50%; }
+  .hp-body { display: grid; grid-template-columns: 1.15fr 1fr; }
+  @media (max-width: 720px){ .hp-body { grid-template-columns: 1fr; } }
+  .hp-chat { padding: 26px; display: flex; flex-direction: column; gap: 14px; border-right: 1px solid var(--border); }
+  .hp-msg { max-width: 85%; padding: 12px 16px; border-radius: 16px; font-size: 14px; line-height: 1.5; }
+  .hp-msg.agent { background: var(--bg-soft); border-bottom-left-radius: 4px; align-self: flex-start; }
+  .hp-msg.user { background: var(--brand-gradient); color: #fff; border-bottom-right-radius: 4px; align-self: flex-end; }
+  .hp-side { padding: 26px; display: flex; flex-direction: column; gap: 16px; text-align: left; }
+  .hp-stat-label { font-size: 11px; font-weight: 700; letter-spacing: .6px; text-transform: uppercase; color: var(--text-mut); }
+  .hp-booked { background: var(--green-bg); border: 1px solid color-mix(in srgb, var(--green) 25%, transparent); border-radius: 14px; padding: 16px; }
+  .hp-booked .t { font-weight: 700; color: var(--green); display: flex; align-items: center; gap: 8px; }
+  .hp-booked .d { font-size: 13px; color: var(--text-soft); margin-top: 4px; }
+  .hp-metrics { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .hp-metric { background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px; padding: 13px; }
+  .hp-metric .n { font-family: var(--font-display); font-size: 24px; font-weight: 800; }
+  .hp-metric .l { font-size: 11.5px; color: var(--text-mut); }
+
+  /* ── Section framing ─────────────────────────────── */
+  section.block { padding: 74px 0; }
+  .section-head { text-align: center; max-width: 640px; margin: 0 auto 46px; }
+  .section-head h2 { font-family: var(--font-display); font-weight: 800; letter-spacing: -.02em; font-size: clamp(28px, 4vw, 40px); margin: 14px 0 12px; }
+  .section-head p { color: var(--text-soft); font-size: 17px; }
+
+  /* ── Feature grid ────────────────────────────────── */
+  .features { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+  @media (max-width: 900px){ .features { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 620px){ .features { grid-template-columns: 1fr; } }
+  .feature { padding: 26px; }
+  .feature .ficon { width: 46px; height: 46px; border-radius: 12px; display: grid; place-items: center; background: color-mix(in srgb, var(--brand-500) 13%, transparent); color: var(--brand-500); margin-bottom: 16px; }
+  .feature .ficon svg { width: 23px; height: 23px; }
+  .feature h3 { font-size: 17px; font-weight: 700; margin-bottom: 7px; }
+  .feature p { font-size: 14.5px; color: var(--text-soft); }
+
+  /* ── Industries ──────────────────────────────────── */
+  .industries { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; max-width: 860px; margin: 0 auto; }
+  .ind-chip {
+    display: inline-flex; align-items: center; gap: 9px; padding: 11px 18px;
+    border: 1px solid var(--border); border-radius: 100px; background: var(--surface);
+    font-size: 14.5px; font-weight: 600; box-shadow: var(--shadow-sm);
+    transition: transform .15s, border-color .15s, color .15s;
+  }
+  .ind-chip:hover { transform: translateY(-2px); border-color: var(--brand-400); color: var(--brand-500); }
+  .ind-chip .emoji { font-size: 17px; }
+
+  /* ── How it works ────────────────────────────────── */
+  .steps { display: grid; grid-template-columns: repeat(3,1fr); gap: 22px; }
+  @media (max-width: 780px){ .steps { grid-template-columns: 1fr; } }
+  .step { padding: 26px; position: relative; }
+  .step .num { font-family: var(--font-display); font-size: 15px; font-weight: 800; width: 34px; height: 34px; border-radius: 10px; background: var(--brand-gradient); color: #fff; display: grid; place-items: center; margin-bottom: 16px; }
+  .step h3 { font-size: 17px; font-weight: 700; margin-bottom: 7px; }
+  .step p { font-size: 14.5px; color: var(--text-soft); }
+
+  /* ── Config callout ──────────────────────────────── */
+  .config-band { background: var(--surface); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+  .config-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: center; }
+  @media (max-width: 820px){ .config-grid { grid-template-columns: 1fr; gap: 30px; } }
+  .config-grid h2 { font-family: var(--font-display); font-weight: 800; letter-spacing: -.02em; font-size: clamp(26px,3.6vw,36px); margin-bottom: 14px; }
+  .config-grid p { color: var(--text-soft); font-size: 16px; margin-bottom: 18px; }
+  .config-list { list-style: none; display: flex; flex-direction: column; gap: 11px; }
+  .config-list li { display: flex; gap: 11px; font-size: 15px; }
+  .config-list svg { width: 20px; height: 20px; color: var(--green); flex-shrink: 0; margin-top: 1px; }
+  .code {
+    background: #0d1017; border: 1px solid #242a38; border-radius: var(--radius);
+    padding: 22px; font-family: ui-monospace, 'SF Mono', Menlo, monospace; font-size: 13px;
+    line-height: 1.7; overflow-x: auto; color: #c9d1e4; box-shadow: var(--shadow-md);
+  }
+  .code .k { color: #7dd3fc; } .code .s { color: #a5d6a7; } .code .c { color: #6b7280; }
+
+  /* ── CTA ─────────────────────────────────────────── */
+  .cta { text-align: center; }
+  .cta-inner {
+    background: var(--brand-gradient); border-radius: var(--radius-lg); padding: 60px 32px; color: #fff;
+    box-shadow: var(--shadow-lg); position: relative; overflow: hidden;
+  }
+  .cta-inner h2 { font-family: var(--font-display); font-weight: 800; font-size: clamp(28px,4vw,42px); letter-spacing: -.02em; margin-bottom: 14px; }
+  .cta-inner p { font-size: 18px; opacity: .92; max-width: 520px; margin: 0 auto 30px; }
+  .cta .btn-ghost { background: rgba(255,255,255,.14); border-color: rgba(255,255,255,.4); color:#fff; backdrop-filter: blur(6px); }
+  .cta .btn-ghost:hover { background: rgba(255,255,255,.24); color:#fff; }
+  .cta .btn-white { background:#fff; color: var(--brand-600); }
+
+  /* ── Footer ──────────────────────────────────────── */
+  footer { border-top: 1px solid var(--border); padding: 40px 0; margin-top: 20px; }
+  footer .inner { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; }
+  footer .muted { color: var(--text-mut); font-size: 13.5px; }
+  footer .flinks { display: flex; gap: 22px; font-size: 13.5px; color: var(--text-soft); }
+</style>
+</head>
+<body>
+
+<nav class="top">
+  <div class="container inner">
+    <a class="brand" href="/" id="nav-brand"></a>
+    <div class="nav-links">
+      <a class="link" href="#features">Features</a>
+      <a class="link" href="#industries">Industries</a>
+      <a class="link" href="#how">How it works</a>
+      <a class="link" href="/dashboard">Dashboard</a>
+    </div>
+    <div class="nav-right">
+      <button class="theme-toggle" data-theme-toggle aria-label="Toggle theme" id="theme-btn"></button>
+      <a class="btn btn-primary" href="/demo">Try live demo</a>
+    </div>
+  </div>
+</nav>
+
+<!-- HERO -->
+<header class="hero">
+  <div class="container">
+    <span class="eyebrow"><span class="dot"></span> AI Voice Agent Platform</span>
+    <h1>Your <span class="grad">AI receptionist</span><br>that never misses a call</h1>
+    <p class="sub">Voxel AI answers the phone, books appointments, and captures leads — in a natural voice, 24/7. One platform, configured for any business.</p>
+    <div class="hero-cta">
+      <a class="btn btn-primary btn-lg" href="/demo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v4M8 23h8"/></svg>
+        Talk to the agent
+      </a>
+      <a class="btn btn-ghost btn-lg" href="/dashboard">Open dashboard</a>
+    </div>
+    <div class="hero-trust">
+      <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg> No code to switch industries</span>
+      <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg> Books real calendar slots</span>
+      <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg> Honors do-not-call instantly</span>
+    </div>
+
+    <!-- Product preview -->
+    <div class="hero-preview reveal">
+      <div class="hp-bar">
+        <span class="hp-dot" style="background:#ff5f57"></span>
+        <span class="hp-dot" style="background:#febc2e"></span>
+        <span class="hp-dot" style="background:#28c840"></span>
+        <span style="margin-left:10px;font-size:12.5px;color:var(--text-mut)" id="hp-title">Live call · Voxel AI</span>
+      </div>
+      <div class="hp-body">
+        <div class="hp-chat">
+          <div class="hp-msg agent" id="hp-a1">Hi! This is Ava calling from your clinic. Do you have a quick moment?</div>
+          <div class="hp-msg user">Sure, what's this about?</div>
+          <div class="hp-msg agent">We're offering free new-patient exams this month. Would you like me to find you a time?</div>
+          <div class="hp-msg user">Yeah, Thursday afternoon works.</div>
+          <div class="hp-msg agent">Perfect — Thursday at 2 PM is open. You're all set!</div>
+        </div>
+        <div class="hp-side">
+          <div class="hp-stat-label">Call outcome</div>
+          <div class="hp-booked">
+            <div class="t"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg> Appointment booked</div>
+            <div class="d" id="hp-appt">Thursday, 2:00 PM · New-patient exam</div>
+          </div>
+          <div class="hp-metrics">
+            <div class="hp-metric"><div class="n">1:12</div><div class="l">Call duration</div></div>
+            <div class="hp-metric"><div class="n">94</div><div class="l">Lead score</div></div>
+            <div class="hp-metric"><div class="n">CRM</div><div class="l">Row saved</div></div>
+            <div class="hp-metric"><div class="n">SMS</div><div class="l">Confirmation sent</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- FEATURES -->
+<section class="block" id="features">
+  <div class="container">
+    <div class="section-head reveal">
+      <span class="eyebrow">Capabilities</span>
+      <h2>Everything a great front desk does</h2>
+      <p>A conversational agent with real tools — not a phone tree. It listens, answers honestly, and takes action.</p>
+    </div>
+    <div class="features">
+      <div class="card feature reveal">
+        <div class="ficon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
+        <h3>Natural conversation</h3>
+        <p>Powered by Claude. Handles objections, answers FAQs, discloses it's AI when asked, and never invents facts it wasn't given.</p>
+      </div>
+      <div class="card feature reveal">
+        <div class="ficon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></div>
+        <h3>Real appointment booking</h3>
+        <p>Checks live availability and books straight into Google Calendar — with conflict detection, not made-up slots.</p>
+      </div>
+      <div class="card feature reveal">
+        <div class="ficon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 15h6M9 11h2"/></svg></div>
+        <h3>Automatic CRM logging</h3>
+        <p>Every call ends with a structured outcome saved to Google Sheets: booked, interested, callback, do-not-call and more.</p>
+      </div>
+      <div class="card feature reveal">
+        <div class="ficon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></div>
+        <h3>Lead scoring</h3>
+        <p>Ranks every prospect 0–100 by engagement so your team follows up with the hottest leads first.</p>
+      </div>
+      <div class="card feature reveal">
+        <div class="ficon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v12H5.17L4 17.17z"/></svg></div>
+        <h3>SMS follow-ups</h3>
+        <p>Automatically texts a recap, a confirmation, or a reminder after the call — timed to lift conversion.</p>
+      </div>
+      <div class="card feature reveal">
+        <div class="ficon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
+        <h3>Built-in guardrails</h3>
+        <p>Stays strictly on the facts you configure, respects do-not-call immediately, and never pressures a caller.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- INDUSTRIES -->
+<section class="block" id="industries" style="background:var(--bg-soft);border-top:1px solid var(--border);border-bottom:1px solid var(--border);">
+  <div class="container">
+    <div class="section-head reveal">
+      <span class="eyebrow">One platform, any business</span>
+      <h2>Configured for your industry in minutes</h2>
+      <p>Swap a single JSON file — or edit it from the dashboard — and the same agent becomes a specialist for your business.</p>
+    </div>
+    <div class="industries reveal">
+      <span class="ind-chip"><span class="emoji">🦷</span> Dental clinics</span>
+      <span class="ind-chip"><span class="emoji">⚖️</span> Law firms</span>
+      <span class="ind-chip"><span class="emoji">🏡</span> Real estate</span>
+      <span class="ind-chip"><span class="emoji">🍽️</span> Restaurants</span>
+      <span class="ind-chip"><span class="emoji">🔧</span> HVAC & home services</span>
+      <span class="ind-chip"><span class="emoji">💇</span> Salons & spas</span>
+      <span class="ind-chip"><span class="emoji">🩺</span> Medical offices</span>
+      <span class="ind-chip"><span class="emoji">🚗</span> Auto shops</span>
+      <span class="ind-chip"><span class="emoji">💼</span> Consultants</span>
+      <span class="ind-chip"><span class="emoji">✨</span> Any small business</span>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section class="block" id="how">
+  <div class="container">
+    <div class="section-head reveal">
+      <span class="eyebrow">How it works</span>
+      <h2>From ring to booked in three steps</h2>
+    </div>
+    <div class="steps">
+      <div class="card step reveal">
+        <div class="num">1</div>
+        <h3>Configure your business</h3>
+        <p>Name, industry, services, hours, FAQs, tone, and promotions live in one config file — no source code to touch.</p>
+      </div>
+      <div class="card step reveal">
+        <div class="num">2</div>
+        <h3>The agent takes the call</h3>
+        <p>Claude drives a natural conversation over the phone (Twilio or Vapi) with speech-to-text and lifelike voice.</p>
+      </div>
+      <div class="card step reveal">
+        <div class="num">3</div>
+        <h3>Outcomes flow to your tools</h3>
+        <p>Appointments hit your calendar, outcomes hit your CRM, and follow-up texts go out — all automatically.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CONFIG BAND -->
+<section class="block config-band">
+  <div class="container">
+    <div class="config-grid">
+      <div class="reveal">
+        <span class="eyebrow">Configurable, not hardcoded</span>
+        <h2>Change the business, not the code</h2>
+        <p>Business owners edit plain fields — no Python, no redeploy. The agent's persona, knowledge, and booking flow all come from configuration.</p>
+        <ul class="config-list">
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg> Company name, industry & contact details</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg> Services, opening hours & booking rules</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg> FAQs, promotions, greeting & AI personality</li>
+        </ul>
+      </div>
+      <div class="reveal">
+<pre class="code"><span class="c">// config/business.json</span>
+{
+  <span class="k">"business_name"</span>: <span class="s">"Bright Smile Dental"</span>,
+  <span class="k">"industry"</span>: <span class="s">"dental clinic"</span>,
+  <span class="k">"agent_name"</span>: <span class="s">"Ava"</span>,
+  <span class="k">"tone"</span>: <span class="s">"warm, professional"</span>,
+  <span class="k">"services"</span>: [ <span class="s">"Exams"</span>, <span class="s">"Whitening"</span> ],
+  <span class="k">"booking"</span>: { <span class="k">"appointment_label"</span>: <span class="s">"appointment"</span> },
+  <span class="k">"promotion"</span>: { <span class="k">"active"</span>: <span class="k">true</span> }
+}</pre>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="block cta">
+  <div class="container">
+    <div class="cta-inner reveal">
+      <h2>Hear it for yourself</h2>
+      <p>Chat with the live agent right now — no phone number, no signup. Watch it handle questions and book an appointment in real time.</p>
+      <div class="hero-cta" style="margin-top:0;">
+        <a class="btn btn-white btn-lg" href="/demo">Launch the live demo</a>
+        <a class="btn btn-ghost btn-lg" href="/dashboard">Explore the dashboard</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="container inner">
+    <a class="brand" href="/" id="foot-brand" style="font-size:16px;"></a>
+    <div class="flinks">
+      <a href="/demo">Demo</a>
+      <a href="/dashboard">Dashboard</a>
+      <a href="#features">Features</a>
+    </div>
+    <span class="muted">Built with FastAPI · Claude · Twilio · Vapi</span>
+  </div>
+</footer>
+
+<script src="/assets/app.js"></script>
+<script>
+  document.getElementById('nav-brand').innerHTML = brandMark('Voxel AI');
+  document.getElementById('foot-brand').innerHTML = brandMark('Voxel AI');
+  document.getElementById('theme-btn').innerHTML = THEME_ICONS;
+
+  // Personalize the hero preview from the active business config, if available.
+  getBusinessConfig().then(biz => {
+    if (!biz || biz.business_name === 'Your Business') return;
+    const label = biz.booking?.appointment_label || 'appointment';
+    document.getElementById('hp-title').textContent = `Live call · ${biz.business_name}`;
+    document.getElementById('hp-a1').textContent =
+      `Hi! This is ${biz.agent_name} calling from ${biz.business_name}. Do you have a quick moment?`;
+    document.getElementById('hp-appt').textContent = `Thursday, 2:00 PM · ${label}`;
+  });
+</script>
+</body>
+</html>

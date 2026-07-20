@@ -6,24 +6,27 @@ The same tools are used in two places:
   2. Vapi calls            — Vapi POSTs to /tools/vapi-webhook; we execute and return.
 """
 import json
+from app.core.business_config import business_config
 from app.services import google_calendar, google_sheets
 
 # ── tool schemas (passed to claude messages.create) ──────────────────────────
+
+_label = business_config.booking.appointment_label
 
 TOOL_DEFINITIONS = [
     {
         "name": "check_available_slots",
         "description": (
-            "Check the shared appointment calendar and return available free in-home "
-            "measure slots for this weekend. Call this when the customer expresses "
-            "interest in booking and states a preferred day or time range."
+            f"Check the shared appointment calendar and return available {_label} slots. "
+            "Call this when the customer expresses interest in booking and states a "
+            "preferred day or time range."
         ),
         "input_schema": {
             "type": "object",
             "properties": {
                 "preferred_day": {
                     "type": "string",
-                    "description": "Saturday or Sunday",
+                    "description": "A weekday name (e.g. Monday), or 'today'/'tomorrow'",
                 },
                 "preferred_time_range": {
                     "type": "string",
@@ -38,28 +41,29 @@ TOOL_DEFINITIONS = [
         },
     },
     {
-        "name": "book_measure_appointment",
+        "name": "book_appointment",
         "description": (
-            "Book the selected free in-home measure appointment in the shared calendar. "
-            "Only call this after the customer has confirmed a specific slot AND provided "
-            "their address. Do not book any other type of service."
+            f"Book the selected {_label} in the shared calendar. Only call this after the "
+            "customer has confirmed a specific slot"
+            + (" AND provided their address" if business_config.booking.requires_address else "")
+            + ". Do not book any other type of service."
         ),
         "input_schema": {
             "type": "object",
             "properties": {
                 "customer_name":    {"type": "string"},
                 "customer_phone":   {"type": "string"},
-                "appointment_date": {"type": "string", "description": "e.g. Saturday"},
+                "appointment_date": {"type": "string", "description": "e.g. Monday, or a specific date"},
                 "appointment_time": {"type": "string", "description": "e.g. 10:00 AM"},
                 "customer_address": {
                     "type": "string",
-                    "description": "Full address the specialist should visit",
+                    "description": "Address to visit, if this business does on-location appointments",
                 },
                 "notes": {"type": "string"},
             },
             "required": [
                 "customer_name", "customer_phone",
-                "appointment_date", "appointment_time", "customer_address",
+                "appointment_date", "appointment_time",
             ],
         },
     },
@@ -110,8 +114,8 @@ async def execute_tool(name: str, inputs: dict) -> str:
                 preferred_time_range=inputs.get("preferred_time_range", ""),
                 customer_phone=inputs.get("customer_phone", ""),
             )
-        elif name == "book_measure_appointment":
-            result = await google_calendar.book_measure_appointment(
+        elif name == "book_appointment":
+            result = await google_calendar.book_appointment(
                 customer_name=inputs.get("customer_name", ""),
                 customer_phone=inputs.get("customer_phone", ""),
                 appointment_date=inputs.get("appointment_date", ""),

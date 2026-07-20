@@ -2,12 +2,19 @@ from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
+    """
+    Infrastructure & secrets only. Everything that describes the business
+    itself (name, industry, services, hours, FAQs, tone, promotions) lives in
+    config/business.json — see app/core/business_config.py — so swapping to a
+    different business never requires touching this file or redeploying code.
+    """
+
     # --- Database ---
     # Defaults to a local SQLite file so the app runs with ZERO database setup.
-    # For Postgres, set DATABASE_URL=postgresql+asyncpg://user:pass@localhost:5432/carpet_agent
-    DATABASE_URL: str = "sqlite+aiosqlite:///./carpet_agent.db"
+    # For Postgres, set DATABASE_URL=postgresql+asyncpg://user:pass@localhost:5432/voxel_ai
+    DATABASE_URL: str = "sqlite+aiosqlite:///./voxel_ai.db"
 
-    # --- Claude (the salesperson brain) ---
+    # --- Claude (the agent brain) ---
     ANTHROPIC_API_KEY: str = ""
     # Opus 4.8 is the most capable model. For snappier phone latency you can set
     # ANTHROPIC_MODEL=claude-haiku-4-5 (fastest) or claude-sonnet-4-6 (balanced).
@@ -30,19 +37,8 @@ class Settings(BaseSettings):
     # --- App / publicly reachable base URL (ngrok or a domain) ---
     APP_BASE_URL: str = "http://localhost:8000"
 
-    # --- Store / offer details (spoken by the agent) ---
-    AGENT_NAME: str = "Sarah"
-    BUSINESS_NAME: str = "Maple Carpet & Flooring"
-    OWNER_NAME: str = "Priya"
-    STORE_ADDRESS: str = ""
-    STORE_PHONE: str = ""
-    STORE_WEBSITE: str = ""
-    # The ONLY facts the agent may state about the offer. Never invent pricing,
-    # extra terms, or financing — the discount is exactly 40%, this weekend only.
-    SALE_HEADLINE: str = "40% off, this weekend only"
-
-    # --- Calling hours (24hr) ---
-    CALL_START_HOUR: int = 10
+    # --- Calling hours (24hr, used as a blanket outbound-dialing guard) ---
+    CALL_START_HOUR: int = 9
     CALL_END_HOUR: int = 19
 
     # --- Google integrations (CRM + Calendar) ---
@@ -51,7 +47,13 @@ class Settings(BaseSettings):
     GOOGLE_SERVICE_ACCOUNT_JSON: str = ""   # full JSON content as a single env var
     GOOGLE_CALENDAR_ID:   str = ""          # e.g. abc123@group.calendar.google.com
     GOOGLE_SHEET_ID:      str = ""          # spreadsheet ID from its URL
-    APPOINTMENT_TIMEZONE: str = "America/Toronto"
+
+    # --- Vapi (cloud-hosted phone calls, no ngrok needed) ---
+    VAPI_API_KEY: str = ""
+    VAPI_PHONE_NUMBER_ID: str = ""
+
+    # --- Business config file location (see app/core/business_config.py) ---
+    BUSINESS_CONFIG_PATH: str = ""
 
     class Config:
         env_file = ".env"

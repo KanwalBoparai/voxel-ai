@@ -1,0 +1,45 @@
+{
+  "business_name": "Northshore Realty Group",
+  "industry": "real estate agency",
+  "tagline": "Your neighborhood, your next move",
+  "agent_name": "Jordan",
+  "owner_name": "Dana Whitfield",
+  "phone": "+15555550212",
+  "email": "hello@northshorerealty.example",
+  "address": "500 Lakeshore Blvd, Toronto, ON",
+  "website": "https://northshorerealty.example",
+  "timezone": "America/Toronto",
+  "tone": "confident, friendly, and helpful",
+  "greeting_style": "warm and energetic",
+  "services": [
+    { "name": "Free home valuation", "description": "No-obligation market estimate of your home's value" },
+    { "name": "Buyer consultation", "description": "One-on-one session to plan your home search" },
+    { "name": "Listing walkthroughs", "description": "Private showings scheduled around your availability" }
+  ],
+  "faqs": [
+    { "question": "How much is my home worth?", "answer": "That depends on your neighborhood and recent comparable sales — that's exactly what the free valuation covers, with no obligation." },
+    { "question": "What's your commission?", "answer": "Commission varies by listing — an agent can walk you through the details on a quick call." },
+    { "question": "Do you work with first-time buyers?", "answer": "Yes, that's a big part of what we do — we can start with a free buyer consultation." }
+  ],
+  "promotion": {
+    "active": true,
+    "headline": "Free home valuation this month",
+    "details": "Get a no-obligation market estimate of your home's value, delivered within 48 hours."
+  },
+  "booking": {
+    "appointment_label": "consultation",
+    "duration_minutes": 45,
+    "requires_address": true,
+    "location_type": "in_home",
+    "scheduling_link": ""
+  },
+  "hours": {
+    "monday":    { "open": "09:00", "close": "18:00", "closed": false },
+    "tuesday":   { "open": "09:00", "close": "18:00", "closed": false },
+    "wednesday": { "open": "09:00", "close": "18:00", "closed": false },
+    "thursday":  { "open": "09:00", "close": "18:00", "closed": false },
+    "friday":    { "open": "09:00", "close": "18:00", "closed": false },
+    "saturday":  { "open": "10:00", "close": "16:00", "closed": false },
+    "sunday":    { "open": "10:00", "close": "16:00", "closed": false }
+  }
+}
