@@ -130,7 +130,7 @@ class FollowUp(Base):
 
 
 class Appointment(Base):
-    """Phase 3: in-store visit booked during a call."""
+    """An appointment booked during a call (any type — visit, consult, reservation)."""
     __tablename__ = "appointments"
 
     id = Column(Integer, primary_key=True, autoincrement=True)

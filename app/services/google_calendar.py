@@ -25,9 +25,12 @@ from zoneinfo import ZoneInfo
 from app.core.config import settings
 from app.core.business_config import business_config
 
-SLOT_DURATION = timedelta(hours=1)
-
 _WEEKDAYS = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
+
+
+def _slot_duration() -> timedelta:
+    """Appointment length from the business config (minutes), default 60."""
+    return timedelta(minutes=business_config.booking.duration_minutes or 60)
 
 _TIME_RANGES = {
     "morning":   range(0, 12),
@@ -123,28 +126,41 @@ def _check_slots_sync(preferred_day: str, preferred_time_range: str) -> dict:
         orderBy="startTime",
     ).execute().get("items", [])
 
-    booked_hours: set[int] = set()
+    # Collect busy intervals so we can detect real overlaps (works for any
+    # appointment length — a 90-min reservation blocks more than one hour).
+    busy: list[tuple[datetime, datetime]] = []
     for ev in events:
-        raw = ev.get("start", {}).get("dateTime") or ev.get("start", {}).get("date", "")
+        s_raw = ev.get("start", {}).get("dateTime") or ev.get("start", {}).get("date", "")
+        e_raw = ev.get("end", {}).get("dateTime") or ev.get("end", {}).get("date", "")
         try:
-            booked_hours.add(datetime.fromisoformat(raw).astimezone(tz).hour)
+            s = datetime.fromisoformat(s_raw).astimezone(tz)
+            e = datetime.fromisoformat(e_raw).astimezone(tz) if e_raw else s + _slot_duration()
+            busy.append((s, e))
         except ValueError:
             pass
 
-    allowed = list(range(open_h, close_h))
+    # Only suggest times within the requested part of the day, if one was given.
     trange = (preferred_time_range or "").lower()
+    hour_filter = None
     for key, hrs in _TIME_RANGES.items():
         if key in trange or trange in key:
-            allowed = [h for h in allowed if h in hrs]
+            hour_filter = hrs
             break
 
+    # Walk candidate start times from open to close, stepping by the appointment
+    # length so back-to-back slots never overlap regardless of duration.
+    dur = _slot_duration()
     day_label = target.strftime("%A")
-    slots = []
-    for h in allowed:
-        if h not in booked_hours:
-            slots.append(f"{day_label} {datetime(2000, 1, 1, h).strftime('%-I:%M %p')}")
-        if len(slots) == 3:
-            break
+    day_open = datetime(target.year, target.month, target.day, open_h, 0, tzinfo=tz)
+    day_close = datetime(target.year, target.month, target.day, close_h, 0, tzinfo=tz)
+
+    slots, cursor = [], day_open
+    while cursor + dur <= day_close and len(slots) < 3:
+        if hour_filter is None or cursor.hour in hour_filter:
+            overlaps = any(cursor < b_end and cursor + dur > b_start for b_start, b_end in busy)
+            if not overlaps:
+                slots.append(f"{day_label} {cursor.strftime('%-I:%M %p')}")
+        cursor += dur
 
     return {"available_slots": slots, "date": str(target)}
 
@@ -191,7 +207,7 @@ def _book_sync(
 
     tz = ZoneInfo(business_config.timezone)
     start_dt = datetime(target.year, target.month, target.day, hour, minute, tzinfo=tz)
-    end_dt   = start_dt + SLOT_DURATION
+    end_dt   = start_dt + _slot_duration()
 
     conflicts = svc.events().list(
         calendarId=settings.GOOGLE_CALENDAR_ID,
