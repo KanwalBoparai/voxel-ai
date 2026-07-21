@@ -134,6 +134,24 @@ business is currently configured.
 
 ---
 
+## Answer inbound calls
+
+The agent can also *answer* calls, not just place them. Point your phone
+number's **Voice webhook** at the inbound endpoint and it picks up, greets the
+caller, and runs the same booking conversation.
+
+**Twilio:** Console → Phone Numbers → your number → *Voice → A call comes in* →
+Webhook: `POST {APP_BASE_URL}/voice/agent/inbound`
+
+**Vapi:** assign the inbound assistant to your number, pointing tools at
+`{APP_BASE_URL}/tools/vapi` (same as outbound).
+
+Inbound calls are logged in the dashboard just like outbound ones. No config
+change is needed — the agent adapts its greeting automatically ("Thanks for
+calling {business_name}…") based on the active `config/business.json`.
+
+---
+
 ## Activate Google Calendar + CRM
 
 ### Step 1 — Google Cloud setup

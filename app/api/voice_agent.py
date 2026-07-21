@@ -151,8 +151,10 @@ async def agent_turn(request: Request, call_id: int, attempts: int = 0, db: Asyn
     if not call:
         return _xml("<Response><Hangup/></Response>")
 
-    first = _first_name(customer)
     history = list(call.transcript or [])
+    # Inbound callers have no pre-confirmed name, so don't feed the placeholder
+    # ("Inbound caller") to the agent as if it were their real name.
+    first = "" if conversation.is_inbound(history) else _first_name(customer)
 
     # No speech captured — re-prompt once or twice, then wrap up.
     if not speech:
@@ -262,6 +264,63 @@ async def agent_status(request: Request, call_id: int, db: AsyncSession = Depend
     call.ended_at = datetime.now(timezone.utc)
     await db.commit()
     return PlainTextResponse("OK")
+
+
+# ----------------------------- inbound calls -----------------------------
+
+async def _get_inbound_campaign(db: AsyncSession) -> Campaign:
+    result = await db.execute(select(Campaign).where(Campaign.name == "Inbound"))
+    campaign = result.scalar_one_or_none()
+    if not campaign:
+        campaign = Campaign(name="Inbound", script_key="conversation")
+        db.add(campaign)
+        await db.commit()
+        await db.refresh(campaign)
+    return campaign
+
+
+@router.post("/inbound")
+async def agent_inbound(request: Request, db: AsyncSession = Depends(get_db)):
+    """
+    Twilio hits this when someone CALLS the business number (point the number's
+    Voice webhook at {APP_BASE_URL}/voice/agent/inbound). The agent answers,
+    then the conversation runs through the same /turn loop as outbound calls.
+    """
+    form = await request.form()
+    from_number = (form.get("From") or "").strip() or f"anon-{int(datetime.now(timezone.utc).timestamp())}"
+
+    # Upsert the caller as a customer so the call is logged like any other.
+    result = await db.execute(select(Customer).where(Customer.phone == from_number))
+    customer = result.scalar_one_or_none()
+    if not customer:
+        customer = Customer(name="Inbound caller", phone=from_number)
+        db.add(customer)
+        await db.commit()
+        await db.refresh(customer)
+
+    campaign = await _get_inbound_campaign(db)
+    call = Call(
+        customer_id=customer.id,
+        campaign_id=campaign.id,
+        status=CallStatus.in_progress,
+        scheduled_at=datetime.now(timezone.utc),
+        started_at=datetime.now(timezone.utc),
+        transcript=[],
+    )
+    db.add(call)
+    await db.commit()
+    await db.refresh(call)
+
+    # Greet the caller (inbound framing is carried by the seed marker so every
+    # later /turn keeps answering as "we picked up", not "we're calling you").
+    history = conversation.inbound_history(customer_phone=customer.phone)
+    reply = await conversation.next_reply(history, first_name="", customer_phone=customer.phone)
+    history.append({"role": "assistant", "content": reply["reply"]})
+    call.transcript = history
+    await db.commit()
+
+    _print_turn(call.id, business_config.agent_name, reply["reply"])
+    return _xml(await _gather_response(reply["reply"], call.id, turn=len(history)))
 
 
 # ----------------------------- demo helpers -----------------------------

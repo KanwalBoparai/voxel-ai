@@ -35,7 +35,7 @@ def _get_client() -> AsyncAnthropic:
     return _client
 
 
-SYSTEM_PROMPT_TEMPLATE = """You are {agent_name}, an AI receptionist making an outbound call ON BEHALF OF {business_name}, a {industry}{owner_clause}. You are calling a customer or past customer. You are on a LIVE PHONE CALL — speak exactly what should be said out loud, nothing else. Your tone is {tone}; keep your greeting {greeting_style}.
+SYSTEM_PROMPT_TEMPLATE = """You are {agent_name}, an AI receptionist {call_framing}. You are on a LIVE PHONE CALL — speak exactly what should be said out loud, nothing else. Your tone is {tone}; keep your greeting {greeting_style}.
 
 ═══ THE ONLY FACTS YOU MAY STATE (stay on these — never invent anything) ═══
 {facts_block}
@@ -68,7 +68,7 @@ If asked something you don't have a fact for, say so honestly and steer toward b
 - Wrong number / "who is this?" / "I've never dealt with you" → Apologize for the mix-up, confirm you may have the wrong person, and offer to remove the number. Add [[DO_NOT_CALL]] if they want off the list, otherwise [[NOT_INTERESTED]].
 
 ═══ THE CALL FLOW ═══
-1. Open {greeting_style}: who you are, that you're calling on behalf of {business_name}, and why. Then ONE question.
+1. {open_step}
 2. Gauge interest in the relevant service.
 3. Drive toward booking a {appointment_label}{promo_nudge}.
 4. If not ready to book → capture interest or a callback. If a flat no → accept and close.
@@ -146,7 +146,7 @@ def _facts_block() -> str:
     return "\n".join(lines) if lines else "- (no specific facts configured — speak generally and honestly)"
 
 
-def _system_for(first_name: str) -> str:
+def _system_for(first_name: str, inbound: bool = False) -> str:
     if first_name:
         name_instruction = f"the customer's pre-confirmed name: {first_name}"
     else:
@@ -159,11 +159,33 @@ def _system_for(first_name: str) -> str:
         promo_nudge = f" — mentioning that {business_config.promotion.headline.lower()}"
     address_clause = " AND given their address" if booking.requires_address else ""
 
+    # Direction-specific framing: the conversation loop, tools, and guardrails
+    # are identical for inbound and outbound — only the opening differs.
+    if inbound:
+        call_framing = (
+            f"answering an inbound call FOR {business_config.business_name}, a "
+            f"{business_config.industry}{owner_clause}. A customer has called in — "
+            f"help them, answer their questions, and book a {booking.appointment_label} if it fits"
+        )
+        open_step = (
+            f"Thank them {business_config.greeting_style} for calling {business_config.business_name}, "
+            f"say who you are, and ask how you can help. Then listen."
+        )
+    else:
+        call_framing = (
+            f"making an outbound call ON BEHALF OF {business_config.business_name}, a "
+            f"{business_config.industry}{owner_clause}. You are calling a customer or past customer"
+        )
+        open_step = (
+            f"Open {business_config.greeting_style}: who you are, that you're calling on behalf of "
+            f"{business_config.business_name}, and why. Then ONE question."
+        )
+
     return SYSTEM_PROMPT_TEMPLATE.format(
         agent_name=business_config.agent_name,
         business_name=business_config.business_name,
-        industry=business_config.industry,
-        owner_clause=owner_clause,
+        call_framing=call_framing,
+        open_step=open_step,
         tone=business_config.tone,
         greeting_style=business_config.greeting_style,
         facts_block=_facts_block(),
@@ -205,6 +227,32 @@ def initial_history(first_name: str, customer_phone: str = "") -> list[dict]:
     ]
 
 
+def inbound_history(customer_phone: str = "") -> list[dict]:
+    """
+    Seed an INBOUND call so the agent greets the caller. The <inbound> marker
+    lets next_reply() keep the inbound framing on every later turn without
+    threading a flag through the webhook or adding a DB column.
+    """
+    phone_line = f" Their phone number is {customer_phone}." if customer_phone else ""
+    return [
+        {
+            "role": "user",
+            "content": (
+                f"<call_connected><inbound>A customer just called in to {business_config.business_name}."
+                f"{phone_line} You do NOT know their name yet — greet them without a name. "
+                f"Open now as {business_config.agent_name}: thank them for calling "
+                f"{business_config.business_name}, say who you are, and ask how you can help. "
+                f"Keep it brief and natural.</call_connected>"
+            ),
+        }
+    ]
+
+
+def is_inbound(history: list[dict]) -> bool:
+    """True if this conversation was seeded as an inbound call (see inbound_history)."""
+    return bool(history) and "<inbound>" in str(history[0].get("content", ""))
+
+
 async def next_reply(
     history: list[dict],
     first_name: str = "",
@@ -215,12 +263,13 @@ async def next_reply(
     Returns: {"reply": str, "action": str|None, "detail": str}
     """
     working = list(history)
+    inbound = is_inbound(history)
 
     for _ in range(6):   # cap at 6 tool-call rounds to prevent runaway loops
         response = await _get_client().messages.create(
             model=settings.ANTHROPIC_MODEL,
             max_tokens=500,
-            system=_system_for(first_name),
+            system=_system_for(first_name, inbound=inbound),
             messages=working,
             tools=TOOL_DEFINITIONS,
             thinking={"type": "disabled"},

@@ -77,6 +77,20 @@ def test_system_prompt_is_generic():
     print("  system prompt — driven by business config, no hardcoded business")
 
 
+def test_inbound_and_outbound_framing():
+    out = conversation._system_for("Jordan", inbound=False)
+    inb = conversation._system_for("", inbound=True)
+    assert "outbound call" in out.lower() and "inbound call" not in out.lower()
+    assert "inbound call" in inb.lower() and "outbound call" not in inb.lower()
+
+    # The inbound seed is detectable on every later turn and hidden from transcripts
+    h = conversation.inbound_history(customer_phone="+14165550100")
+    assert conversation.is_inbound(h)
+    assert not conversation.is_inbound(conversation.initial_history("Jordan"))
+    assert h[0]["content"].startswith("<call_connected>")  # so transcript filter hides it
+    print("  inbound/outbound framing — direction-aware prompt + seed detection")
+
+
 def test_initial_history_shape():
     # With known name and phone
     h = conversation.initial_history("Jordan", customer_phone="+14165550001")
@@ -134,6 +148,7 @@ if __name__ == "__main__":
         test_tool_definitions,
         test_business_config_loads,
         test_system_prompt_is_generic,
+        test_inbound_and_outbound_framing,
         test_initial_history_shape,
         test_app_boots_and_endpoints,
     ]:

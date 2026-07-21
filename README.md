@@ -44,7 +44,7 @@ What makes it a *platform* rather than a one-off bot: **every business-specific 
 - **🛡️ Built-in guardrails** — stays strictly on configured facts, honors do-not-call instantly, and never pressures a caller.
 - **⚙️ Config-driven** — industry, persona, services, hours, FAQs, promotions, and booking rules all come from JSON.
 - **🖥️ Owner dashboard** — analytics, call logs with transcripts, appointments, and live-editable AI settings.
-- **📞 Two call paths** — a full conversational flow (Claude) *and* a simpler keypad/DTMF flow, plus a **browser demo** that needs no phone.
+- **📞 Inbound *and* outbound** — place calls to customers *and* answer calls to your number; the agent adapts its greeting automatically. Plus a keypad/DTMF flow and a **browser demo** that needs no phone.
 
 ---
 
@@ -282,8 +282,8 @@ The live demo is then at `https://your-service.onrender.com/demo`. See [RUNBOOK.
 
 ## 🗺️ Future Roadmap
 
+- [x] **Inbound calls** — answer as well as place calls ✅
 - [ ] **Multi-tenant mode** — multiple businesses per deployment, DB-backed config
-- [ ] **Inbound calls** — answer as well as place calls
 - [ ] **Web voice widget** — real-time voice (not just text) in the browser demo
 - [ ] **Analytics warehouse** — export call data to BigQuery / Postgres dashboards
 - [ ] **More integrations** — HubSpot, Salesforce, Calendly, Outlook Calendar
