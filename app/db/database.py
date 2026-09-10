@@ -25,7 +25,27 @@ def normalize_db_url(url: str) -> str:
     )
 
 
-engine = create_async_engine(normalize_db_url(settings.DATABASE_URL), echo=False)
+def _build_engine():
+    """
+    Build the async engine without ever raising at import time.
+
+    create_async_engine() validates the URL and resolves the driver eagerly, so
+    a malformed DATABASE_URL — or one naming a driver that isn't installed —
+    raises here, while this module is being imported. On a serverless host that
+    means the function never loads at all and every request, including /health,
+    comes back as a bare crash with nothing useful in the log. Falling back to a
+    scratch SQLite file keeps the app importable so it can report the problem;
+    endpoints that actually touch the database still fail loudly.
+    """
+    url = normalize_db_url(settings.DATABASE_URL)
+    try:
+        return create_async_engine(url, echo=False)
+    except Exception as exc:
+        print(f"[db] unusable DATABASE_URL ({exc}) — falling back to scratch SQLite")
+        return create_async_engine("sqlite+aiosqlite:////tmp/voxel_fallback.db", echo=False)
+
+
+engine = _build_engine()
 AsyncSessionLocal = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
 

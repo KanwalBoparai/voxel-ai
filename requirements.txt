@@ -23,6 +23,10 @@ fastapi==0.115.0
 sqlalchemy==2.0.35
 greenlet==3.1.1
 asyncpg==0.29.0
+# ~30 KB. Not for production data — it backs the config default and the
+# fallback engine in app/db/database.py, so a missing or malformed DATABASE_URL
+# degrades to a boot-with-errors instead of a function that won't import.
+aiosqlite==0.20.0
 twilio==9.3.4
 anthropic>=0.49.0
 httpx==0.27.2

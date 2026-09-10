@@ -1,42 +1,31 @@
-# Vercel serves the static frontend in web/ and nothing else.
-#
-# Everything Python is excluded on purpose. Vercel decides a project is Python
-# by finding an api/ directory and a requirements.txt, so leaving those in the
-# upload makes it install a Builder and try to run a serverless function. That
-# is what produced the "@vercel/python (pin-version-mismatch)" build failure.
-# With them ignored there is no build step at all — just files being served —
-# so the deploy needs no ANTHROPIC_API_KEY, no database, and no secrets.
-#
-# The backend still lives in this repo and still runs locally and on Render.
-# To put it back on Vercel, drop these Python entries and restore the
-# functions/rewrites block in vercel.json.
+# Keep the uploaded bundle small and free of local artefacts. The Python
+# backend (api/, app/, config/, requirements.txt) is deliberately NOT listed —
+# Vercel detects the project as Python by finding api/*.py plus requirements.txt
+# at the root, and app/ and config/ are pulled in by includeFiles in vercel.json.
 
-api/
-app/
-scripts/
-tests/
-migrations/
-config/
-requirements.txt
-requirements-server.txt
-*.py
-setup.sh
-render.yaml
-
-# Local artefacts
+# Local virtualenv — hundreds of MB, and the function installs its own deps.
 .venv/
 __pycache__/
 *.pyc
+*.pyo
+
+# Local SQLite databases — production uses Postgres.
 *.db
 *.sqlite
 *.sqlite3
 
-# Secrets — a static deploy needs none of these.
+# Secrets: environment variables are configured in the Vercel dashboard.
 .env
 *.env
 service-account*.json
 credentials*.json
 
+# Not needed at runtime.
+tests/
+migrations/
+render.yaml
+requirements-server.txt
+setup.sh
 *.md
 .git/
 .claude/
