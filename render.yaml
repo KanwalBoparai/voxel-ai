@@ -3,9 +3,12 @@
 # How to use:
 #   1. Push this repo to GitHub.
 #   2. Go to https://dashboard.render.com → New → Blueprint.
-#   3. Connect this repo. Render reads this file and creates the service.
-#   4. In the dashboard, fill in the secret env vars marked "sync: false" below
-#      (ANTHROPIC_API_KEY, VAPI_*, GOOGLE_*).
+#   3. Connect this repo. Render reads this file and creates the Postgres
+#      database and the web service, and links them via DATABASE_URL.
+#   4. In the dashboard, fill in the secret env vars marked "sync: false" below.
+#      Only ANTHROPIC_API_KEY is required to boot; the rest unlock features
+#      (VAPI_* for phone calls, GOOGLE_* for calendar/CRM). Leave any you're
+#      not using blank — the app degrades gracefully rather than crashing.
 #   5. After the first deploy, copy the service URL (e.g.
 #      https://voxel-ai.onrender.com) and set APP_BASE_URL to it, then point
 #      your Vapi tools at {APP_BASE_URL}/tools/vapi.
@@ -14,9 +17,16 @@
 # config/business.json, which is committed with the repo — edit it there or via
 # the dashboard's AI Settings page.
 #
-# Note: the free plan has an ephemeral filesystem, so the local SQLite file
-# resets on redeploy. That's fine — the real CRM (Google Sheets) and calendar
-# (Google Calendar) live externally. For persistent SQLite, add a paid disk.
+# Storage: the web service's filesystem is ephemeral, so a local SQLite file
+# would reset on every redeploy. This blueprint provisions a managed Postgres
+# instance instead and wires DATABASE_URL to it automatically — call history and
+# campaigns survive deploys with no manual setup.
+
+databases:
+  - name: voxel-ai-db
+    databaseName: voxel_ai
+    plan: free
+    region: oregon
 
 services:
   - type: web
@@ -24,13 +34,23 @@ services:
     runtime: python
     plan: free
     region: oregon
-    buildCommand: pip install -r requirements.txt
+    # requirements.txt is trimmed to what the Vercel function bundle needs;
+    # running as a long-lived server additionally needs uvicorn.
+    buildCommand: pip install -r requirements-server.txt
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /health
     autoDeploy: true
     envVars:
       - key: PYTHON_VERSION
         value: "3.12.0"
+
+      # --- Database (wired automatically to the Postgres instance above) ---
+      # Render emits a `postgresql://…` URL; app/db/database.py rewrites it to
+      # the asyncpg driver that SQLAlchemy's async engine requires.
+      - key: DATABASE_URL
+        fromDatabase:
+          name: voxel-ai-db
+          property: connectionString
 
       # --- Claude (required — the agent brain) ---
       - key: ANTHROPIC_API_KEY
@@ -42,6 +62,26 @@ services:
       - key: VAPI_API_KEY
         sync: false
       - key: VAPI_PHONE_NUMBER_ID
+        sync: false
+
+      # --- Twilio (only for the built-in /voice/agent call flow; Vapi users
+      #     can leave these blank) ---
+      - key: TWILIO_ACCOUNT_SID
+        sync: false
+      - key: TWILIO_AUTH_TOKEN
+        sync: false
+      - key: TWILIO_PHONE_NUMBER
+        sync: false
+
+      # --- Text to speech ---
+      # "elevenlabs" needs both keys below. Leave TTS_PROVIDER as "twilio" to
+      # use the built-in neural voice with no extra account; _say() in
+      # app/api/voice_agent.py also falls back to it if ElevenLabs errors.
+      - key: TTS_PROVIDER
+        value: twilio
+      - key: ELEVENLABS_API_KEY
+        sync: false
+      - key: ELEVENLABS_VOICE_ID
         sync: false
 
       # --- Google Calendar + Sheets CRM ---

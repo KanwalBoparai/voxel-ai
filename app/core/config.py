@@ -12,7 +12,15 @@ class Settings(BaseSettings):
     # --- Database ---
     # Defaults to a local SQLite file so the app runs with ZERO database setup.
     # For Postgres, set DATABASE_URL=postgresql+asyncpg://user:pass@localhost:5432/voxel_ai
+    # (a plain postgres:// URL from a managed provider is normalised for you —
+    # see app/db/database.py). Serverless deploys need Postgres: SQLite would
+    # write to a read-only directory and vanish between invocations anyway.
     DATABASE_URL: str = "sqlite+aiosqlite:///./voxel_ai.db"
+
+    # Create missing tables on startup. Convenient locally; on serverless it
+    # would run on every cold start, so deploys set this false and create the
+    # schema once with `python scripts/init_db.py`.
+    AUTO_CREATE_TABLES: bool = True
 
     # --- Claude (the agent brain) ---
     ANTHROPIC_API_KEY: str = ""

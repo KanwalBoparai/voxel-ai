@@ -1,0 +1,14 @@
+# Extra dependencies for running the app as a long-lived process — local
+# development (`uvicorn app.main:app --reload`) or a container/VM deploy such
+# as the Render blueprint in render.yaml.
+#
+#   pip install -r requirements-server.txt
+#
+# Vercel installs requirements.txt only. Serverless has no server to run, so
+# uvicorn is dead weight in the function bundle, and aiosqlite backs the
+# zero-setup SQLite default that serverless can't use anyway (read-only disk).
+
+-r requirements.txt
+
+uvicorn[standard]==0.30.6
+aiosqlite==0.20.0

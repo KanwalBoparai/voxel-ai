@@ -1,25 +1,41 @@
+# Runtime dependencies — installed into the Vercel serverless function.
+#
+# Vercel caps an unzipped function bundle at 250 MB, so this list is kept to
+# what the app actually imports. Local-development-only packages (the uvicorn
+# server, the SQLite driver) live in requirements-dev.txt and are deliberately
+# NOT installed in production.
+#
+# Removed and why — do not add these back without checking the size budget:
+#   pandas / numpy   ~104 MB, was used only to parse an upload CSV; the stdlib
+#                    `csv` module does the same job (see app/api/campaigns.py).
+#   elevenlabs       app/services/voice.py calls the REST API with httpx; the
+#                    SDK was never imported.
+#   apscheduler      needs a long-lived process, which serverless has no way to
+#                    provide. Nothing imported app/services/scheduler.py.
+#   psycopg2-binary  asyncpg is the driver actually in use.
+#   alembic          never imported; schema is created by scripts/init_db.py.
+#   google-api-      ~76 MB, almost entirely 522 bundled API discovery docs. We
+#     python-client  used exactly three Calendar endpoints, so
+#                    app/services/google_calendar.py now calls the REST API
+#                    directly with httpx + a google-auth bearer token.
+
 fastapi==0.115.0
-uvicorn[standard]==0.30.6
 sqlalchemy==2.0.35
 greenlet==3.1.1
 asyncpg==0.29.0
-aiosqlite==0.20.0
-alembic==1.13.3
-psycopg2-binary==2.9.9
 twilio==9.3.4
-elevenlabs==1.9.0
 anthropic>=0.49.0
 httpx==0.27.2
 python-dotenv==1.0.1
 python-multipart==0.0.12
 pydantic==2.9.2
 pydantic-settings==2.5.2
-pandas==2.2.3
 phonenumbers==8.13.47
-apscheduler==3.10.4
 
 # --- Google Calendar + Sheets (CRM) ---
-google-api-python-client==2.147.0
+# google-auth mints the service-account bearer token; `requests` backs its
+# transport (google.auth.transport.requests) and is pinned explicitly rather
+# than relied on as a gspread transitive dependency.
 google-auth==2.35.0
-google-auth-httplib2==0.2.0
+requests==2.32.3
 gspread==6.1.2

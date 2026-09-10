@@ -1,4 +1,7 @@
-from sqlalchemy import Column, String, Integer, Boolean, DateTime, Text, Enum, ForeignKey, Float, JSON
+from sqlalchemy import (
+    Column, String, Integer, Boolean, DateTime, Text, Enum, ForeignKey, Float,
+    JSON, LargeBinary,
+)
 from sqlalchemy.orm import DeclarativeBase, relationship
 from sqlalchemy.sql import func
 import enum
@@ -6,6 +9,37 @@ import enum
 
 class Base(DeclarativeBase):
     pass
+
+
+class Setting(Base):
+    """
+    Key/value store for settings the dashboard can edit at runtime.
+
+    On a serverless host the deployment directory is read-only, so the AI
+    Settings page cannot write config/business.json. That file stays in the
+    repo as the committed baseline; anything saved from the dashboard is
+    layered on top from this table. See app/core/business_config.py.
+    """
+    __tablename__ = "settings"
+
+    key = Column(String(64), primary_key=True)
+    value = Column(JSON, nullable=False)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+
+class AudioClip(Base):
+    """
+    Cached text-to-speech audio, served back to Twilio by GET /audio/{filename}.
+
+    Every serverless invocation gets its own container, so an MP3 written to
+    /tmp while generating speech is gone by the time Twilio calls back to fetch
+    it. Storing the bytes here makes the URL resolvable from any container.
+    """
+    __tablename__ = "audio_clips"
+
+    filename = Column(String(255), primary_key=True)
+    content = Column(LargeBinary, nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
 
 
 class CallStatus(str, enum.Enum):

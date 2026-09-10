@@ -11,6 +11,7 @@ Set BUSINESS_CONFIG_PATH to point at a different file (see config/examples/
 for industry starting points). Defaults to config/business.json.
 """
 import json
+import time
 from pathlib import Path
 from typing import Optional
 
@@ -109,25 +110,81 @@ def load_business_config(path: Optional[Path] = None) -> BusinessConfig:
     return BusinessConfig(**data)
 
 
-def save_business_config(config: BusinessConfig, path: Optional[Path] = None) -> None:
-    p = path or config_path()
-    p.parent.mkdir(parents=True, exist_ok=True)
-    with open(p, "w") as f:
-        json.dump(config.model_dump(), f, indent=2)
-
-
-# Loaded once at import time; reload_business_config() refreshes it (used by
-# the AI Settings dashboard page after a save).
+# Loaded once at import time from the committed JSON file. This is the
+# baseline; anything the dashboard has saved is layered on top from the
+# database by refresh_business_config().
 business_config = load_business_config()
 
 
-def reload_business_config() -> BusinessConfig:
+# ── database overlay ─────────────────────────────────────────────────────────
+#
+# The dashboard used to write config/business.json directly. That works on a
+# normal server but not on a serverless host, where the deployment directory is
+# read-only and the write raises OSError. Saved edits go to the settings table
+# instead, keyed by _DB_KEY.
+
+_DB_KEY = "business_config"
+
+# How long a warm container may serve its in-memory copy before re-reading the
+# database. Bounds how stale another container's view can be after a save.
+_REFRESH_SECONDS = 60
+_last_refresh: Optional[float] = None
+
+
+def _apply(config: BusinessConfig) -> BusinessConfig:
     """
-    Refresh business_config in place (mutating the existing instance's fields
-    rather than rebinding the name) so every module that already did
-    `from app.core.business_config import business_config` sees the update
-    immediately — no process restart needed after a dashboard save.
+    Update business_config in place — mutating the existing instance rather
+    than rebinding the name — so every module that already did
+    `from app.core.business_config import business_config` sees the change.
     """
-    fresh = load_business_config()
-    business_config.__dict__.update(fresh.__dict__)
+    business_config.__dict__.update(config.__dict__)
     return business_config
+
+
+async def load_business_config_from_db() -> BusinessConfig:
+    """Overlay the dashboard-saved config, if any, onto the in-memory singleton."""
+    from sqlalchemy import select
+
+    from app.db.database import AsyncSessionLocal
+    from app.db.models import Setting
+
+    async with AsyncSessionLocal() as db:
+        result = await db.execute(select(Setting.value).where(Setting.key == _DB_KEY))
+        data = result.scalar_one_or_none()
+
+    return _apply(BusinessConfig(**data)) if data else business_config
+
+
+async def save_business_config_to_db(config: BusinessConfig) -> BusinessConfig:
+    """Persist a dashboard edit and apply it to this container immediately."""
+    from app.db.database import AsyncSessionLocal
+    from app.db.models import Setting
+
+    async with AsyncSessionLocal() as db:
+        await db.merge(Setting(key=_DB_KEY, value=config.model_dump(mode="json")))
+        await db.commit()
+
+    global _last_refresh
+    _last_refresh = time.monotonic()
+    return _apply(config)
+
+
+async def refresh_business_config() -> BusinessConfig:
+    """
+    Re-read the saved config if this container's copy has gone stale.
+
+    Called per request from main.py. A database that is unreachable or has no
+    settings table yet must not take the whole app down, so failures fall back
+    to the committed baseline and are rate-limited like a success.
+    """
+    global _last_refresh
+    now = time.monotonic()
+    if _last_refresh is not None and now - _last_refresh < _REFRESH_SECONDS:
+        return business_config
+
+    _last_refresh = now
+    try:
+        return await load_business_config_from_db()
+    except Exception as exc:
+        print(f"[business-config] using committed baseline; DB read failed: {exc}")
+        return business_config

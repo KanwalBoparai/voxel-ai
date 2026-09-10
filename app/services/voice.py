@@ -27,18 +27,30 @@ async def text_to_speech(text: str) -> bytes:
 
 async def generate_and_cache(text: str, cache_key: str) -> str:
     """
-    Generate audio for a script line, save to /tmp, and return a URL
-    that Twilio can fetch. Returns the public URL.
+    Generate audio for a script line, store it, and return the URL Twilio
+    should fetch it from.
+
+    The bytes go into the audio_clips table rather than /tmp: Twilio fetches
+    the URL in a separate HTTP request, which on a serverless host lands in a
+    different container with a different (empty) /tmp. Opening its own session
+    keeps this callable from _say(), which has no request-scoped one.
     """
-    import os
     import hashlib
 
-    filename = f"{cache_key}_{hashlib.md5(text.encode()).hexdigest()[:8]}.mp3"
-    filepath = f"/tmp/{filename}"
+    from sqlalchemy import select
 
-    if not os.path.exists(filepath):
-        audio = await text_to_speech(text)
-        with open(filepath, "wb") as f:
-            f.write(audio)
+    from app.db.database import AsyncSessionLocal
+    from app.db.models import AudioClip
+
+    filename = f"{cache_key}_{hashlib.md5(text.encode()).hexdigest()[:8]}.mp3"
+
+    async with AsyncSessionLocal() as db:
+        existing = await db.execute(
+            select(AudioClip.filename).where(AudioClip.filename == filename)
+        )
+        if existing.scalar_one_or_none() is None:
+            audio = await text_to_speech(text)
+            await db.merge(AudioClip(filename=filename, content=audio))
+            await db.commit()
 
     return f"{settings.APP_BASE_URL}/audio/{filename}"

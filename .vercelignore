@@ -1,0 +1,27 @@
+# Keep the uploaded bundle small and free of local artefacts. Matters most for
+# `vercel deploy` from a laptop, where the local virtualenv (hundreds of MB) is
+# otherwise uploaded and can push the function past its 250 MB unzipped limit.
+.venv/
+__pycache__/
+*.pyc
+
+# Local SQLite databases — production uses Postgres.
+*.db
+*.sqlite
+*.sqlite3
+
+# Secrets: environment variables are configured in the Vercel dashboard.
+.env
+*.env
+service-account*.json
+credentials*.json
+
+# Not needed at runtime.
+tests/
+migrations/
+render.yaml
+requirements-server.txt
+setup.sh
+*.md
+.git/
+.claude/

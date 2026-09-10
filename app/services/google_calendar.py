@@ -20,10 +20,20 @@ import json
 import re
 from datetime import datetime, timedelta, date
 from typing import Optional
+from urllib.parse import quote
 from zoneinfo import ZoneInfo
+
+import httpx
 
 from app.core.config import settings
 from app.core.business_config import business_config
+
+# We talk to the Calendar REST API directly with httpx rather than through
+# google-api-python-client. That SDK ships 522 bundled API discovery documents
+# (76 MB, of which we need one), which alone would push the Vercel function
+# past its 250 MB unzipped limit. The three calls we make — list events twice,
+# insert once — are a thin wrapper over two endpoints.
+_CALENDAR_API = "https://www.googleapis.com/calendar/v3"
 
 _WEEKDAYS = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
 
@@ -87,19 +97,61 @@ def _credentials():
         return None
 
 
-def _calendar_service():
+def _access_token() -> Optional[str]:
+    """Mint a short-lived OAuth bearer token, or None if Google isn't configured."""
     creds = _credentials()
     if creds is None:
         return None
-    from googleapiclient.discovery import build
-    return build("calendar", "v3", credentials=creds, cache_discovery=False)
+    try:
+        from google.auth.transport.requests import Request
+        creds.refresh(Request())
+        return creds.token
+    except Exception as exc:
+        print(f"[calendar] token refresh failed: {exc}")
+        return None
+
+
+def _events_url() -> str:
+    # Calendar IDs look like abc123@group.calendar.google.com — quote so the
+    # '@' and any other reserved characters survive the path segment.
+    return f"{_CALENDAR_API}/calendars/{quote(settings.GOOGLE_CALENDAR_ID, safe='')}/events"
+
+
+def _events_list(token: str, *, time_min: str, time_max: str,
+                 order_by: Optional[str] = None) -> list[dict]:
+    params = {
+        "timeMin": time_min,
+        "timeMax": time_max,
+        "singleEvents": "true",
+    }
+    if order_by:
+        params["orderBy"] = order_by
+    r = httpx.get(
+        _events_url(),
+        params=params,
+        headers={"Authorization": f"Bearer {token}"},
+        timeout=15,
+    )
+    r.raise_for_status()
+    return r.json().get("items", [])
+
+
+def _events_insert(token: str, event: dict) -> dict:
+    r = httpx.post(
+        _events_url(),
+        json=event,
+        headers={"Authorization": f"Bearer {token}"},
+        timeout=15,
+    )
+    r.raise_for_status()
+    return r.json()
 
 
 # ── sync workers (run in thread pool) ────────────────────────────────────────
 
 def _check_slots_sync(preferred_day: str, preferred_time_range: str) -> dict:
-    svc = _calendar_service()
-    if svc is None or not settings.GOOGLE_CALENDAR_ID:
+    token = _access_token()
+    if token is None or not settings.GOOGLE_CALENDAR_ID:
         return {
             "available_slots": [],
             "note": "Calendar not configured — note the customer's preference so the business can confirm.",
@@ -118,13 +170,12 @@ def _check_slots_sync(preferred_day: str, preferred_time_range: str) -> dict:
     day_start = datetime(target.year, target.month, target.day, 0, 0, tzinfo=tz)
     day_end   = day_start + timedelta(days=1)
 
-    events = svc.events().list(
-        calendarId=settings.GOOGLE_CALENDAR_ID,
-        timeMin=day_start.isoformat(),
-        timeMax=day_end.isoformat(),
-        singleEvents=True,
-        orderBy="startTime",
-    ).execute().get("items", [])
+    events = _events_list(
+        token,
+        time_min=day_start.isoformat(),
+        time_max=day_end.isoformat(),
+        order_by="startTime",
+    )
 
     # Collect busy intervals so we can detect real overlaps (works for any
     # appointment length — a 90-min reservation blocks more than one hour).
@@ -189,8 +240,8 @@ def _book_sync(
     appointment_date: str, appointment_time: str,
     customer_address: str, notes: str,
 ) -> dict:
-    svc = _calendar_service()
-    if svc is None or not settings.GOOGLE_CALENDAR_ID:
+    token = _access_token()
+    if token is None or not settings.GOOGLE_CALENDAR_ID:
         return {
             "booked": False,
             "note": "Calendar not configured — the business will confirm the appointment directly.",
@@ -209,12 +260,11 @@ def _book_sync(
     start_dt = datetime(target.year, target.month, target.day, hour, minute, tzinfo=tz)
     end_dt   = start_dt + _slot_duration()
 
-    conflicts = svc.events().list(
-        calendarId=settings.GOOGLE_CALENDAR_ID,
-        timeMin=start_dt.isoformat(),
-        timeMax=end_dt.isoformat(),
-        singleEvents=True,
-    ).execute().get("items", [])
+    conflicts = _events_list(
+        token,
+        time_min=start_dt.isoformat(),
+        time_max=end_dt.isoformat(),
+    )
 
     if conflicts:
         return {"booked": False, "error": "That slot was just taken — please offer another time."}
@@ -232,7 +282,7 @@ def _book_sync(
         "start": {"dateTime": start_dt.isoformat(), "timeZone": business_config.timezone},
         "end":   {"dateTime": end_dt.isoformat(),   "timeZone": business_config.timezone},
     }
-    created = svc.events().insert(calendarId=settings.GOOGLE_CALENDAR_ID, body=event).execute()
+    created = _events_insert(token, event)
     return {
         "booked": True,
         "event_id":   created.get("id"),

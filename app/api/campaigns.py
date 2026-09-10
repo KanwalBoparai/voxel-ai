@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 from pydantic import BaseModel
 from datetime import datetime, timezone
-import pandas as pd
+import csv
 import io
 import phonenumbers
 
@@ -49,17 +49,20 @@ async def upload_customers(file: UploadFile = File(...), db: AsyncSession = Depe
     Optional columns: email
     """
     contents = await file.read()
-    df = pd.read_csv(io.BytesIO(contents))
+    text = contents.decode("utf-8-sig", errors="replace")  # -sig strips Excel's BOM
+    reader = csv.DictReader(io.StringIO(text))
 
-    required = {"name", "phone"}
-    if not required.issubset(set(df.columns.str.lower())):
+    if not reader.fieldnames:
+        raise HTTPException(400, "CSV is empty")
+
+    # Normalise headers once so lookups below are case/whitespace insensitive.
+    reader.fieldnames = [(h or "").strip().lower() for h in reader.fieldnames]
+    if not {"name", "phone"}.issubset(set(reader.fieldnames)):
         raise HTTPException(400, "CSV must have 'name' and 'phone' columns")
 
-    df.columns = df.columns.str.lower()
-
     added, skipped, invalid = 0, 0, 0
-    for _, row in df.iterrows():
-        raw_phone = str(row["phone"]).strip()
+    for row in reader:
+        raw_phone = (row.get("phone") or "").strip()
         try:
             parsed = phonenumbers.parse(raw_phone, "US")
             if not phonenumbers.is_valid_number(parsed):
@@ -76,9 +79,9 @@ async def upload_customers(file: UploadFile = File(...), db: AsyncSession = Depe
             continue
 
         customer = Customer(
-            name=str(row["name"]).strip(),
+            name=(row.get("name") or "").strip(),
             phone=e164,
-            email=str(row.get("email", "")).strip() or None,
+            email=(row.get("email") or "").strip() or None,
         )
         db.add(customer)
         added += 1
