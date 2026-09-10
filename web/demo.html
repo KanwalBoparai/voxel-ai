@@ -125,7 +125,7 @@
         <div class="agent-avatar" id="agent-av">AV</div>
         <div class="agent-name" id="agent-name">Ava</div>
         <div class="agent-role" id="agent-role">AI Receptionist</div>
-        <span class="pill pill-green"><span class="status-dot"></span> Online</span>
+        <span class="pill pill-green" id="agent-status"><span class="status-dot"></span> Online</span>
       </div>
 
       <div class="card card-pad" id="promo-card" style="display:none">
@@ -226,11 +226,14 @@ function showTyping() {
 }
 function removeTyping(){ const t = document.getElementById('typing'); if (t) t.remove(); }
 
+const OFFLINE_NOTE = 'This is a preview of the interface — the live agent runs on the backend, which is not part of this deployment.';
+
 async function callAPI(msg) {
   const res = await fetch('/demo/chat', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ session_id: SID, message: msg, name: '' })
   });
+  if (!res.ok) throw new Error('agent unavailable');
   return res.json();
 }
 
@@ -240,7 +243,7 @@ async function sendMsg() {
   addMsg(txt, false); $input.value = ''; $hints.style.display = 'none';
   showTyping();
   let d;
-  try { d = await callAPI(txt); } catch(e){ removeTyping(); addMsg('(The agent is offline — set ANTHROPIC_API_KEY to enable live replies.)', true); return; }
+  try { d = await callAPI(txt); } catch(e){ removeTyping(); addMsg(OFFLINE_NOTE, true); return; }
   removeTyping(); addMsg(d.reply, true, d.action);
   const terminal = ['BOOK','INTERESTED','CALLBACK','NOT_INTERESTED','DO_NOT_CALL','WRONG_NUMBER','BAD_TIMING','TRANSFER','END'];
   if (terminal.includes(d.action)) { ended = true; $ended.style.display = 'block'; $input.disabled = true; }
@@ -249,9 +252,19 @@ function useHint(el){ $input.value = el.textContent; $input.focus(); }
 function restart(){ ended = false; $msgs.innerHTML=''; $ended.style.display='none'; $hints.style.display='flex'; $input.disabled=false; init(); }
 
 async function init() {
+  // No backend in this deployment — say so up front instead of showing a
+  // typing indicator for a reply that is never coming.
+  if (!apiOnline()) {
+    addMsg(OFFLINE_NOTE, true);
+    $input.disabled = true;
+    $input.placeholder = 'Live chat needs the backend running';
+    const st = document.getElementById('agent-status');
+    if (st) { st.className = 'pill pill-mut'; st.textContent = 'Preview'; }
+    return;
+  }
   showTyping();
   let d;
-  try { d = await callAPI(''); } catch(e){ removeTyping(); addMsg('(The agent is offline — set ANTHROPIC_API_KEY to enable live replies.)', true); return; }
+  try { d = await callAPI(''); } catch(e){ removeTyping(); addMsg(OFFLINE_NOTE, true); return; }
   removeTyping(); addMsg(d.reply, true);
 }
 

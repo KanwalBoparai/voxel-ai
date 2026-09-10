@@ -1,14 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "functions": {
-    "api/index.py": {
-      "runtime": "@vercel/python@4.3.0",
-      "memory": 1024,
-      "maxDuration": 60,
-      "includeFiles": "{app,web,config}/**"
-    }
-  },
-  "rewrites": [
-    { "source": "/(.*)", "destination": "/api/index" }
-  ]
+  "outputDirectory": "web",
+  "cleanUrls": true,
+  "trailingSlash": false
 }

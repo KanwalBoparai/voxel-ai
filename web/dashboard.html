@@ -607,7 +607,11 @@ async function saveConfig() {
     ['saved-ai','saved-business','saved-knowledge'].forEach(id => { const el=document.getElementById(id); if(el){el.classList.remove('show');} });
     const msg = document.getElementById('saved-'+active); if (msg){ msg.classList.add('show'); setTimeout(()=>msg.classList.remove('show'), 2400); }
     applyBranding();
-  } catch(e) { alert('Could not save — is the server running?'); }
+  } catch(e) {
+    alert(apiOnline()
+      ? 'Could not save — the server rejected the request.'
+      : 'This is a preview of the interface. Saving changes needs the backend, which is not part of this deployment.');
+  }
 }
 
 function applyBranding() {

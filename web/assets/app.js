@@ -31,22 +31,49 @@ const THEME_ICONS = `
   <svg class="moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>`;
 
 // ── Business config ──────────────────────────────────────────────────────────
+//
+// Three sources, tried in order:
+//   1. /api/business-config   — the live backend (local dev, or a full deploy)
+//   2. /business-config.json  — a static copy, so the interface still shows the
+//                               real business on a frontend-only deployment
+//   3. built-in placeholders  — last resort, so nothing ever renders blank
+//
+// Whether step 1 succeeded is recorded in _apiOnline; pages use apiOnline() to
+// tell "the agent is thinking" apart from "there is no backend here", and to
+// label themselves as a preview rather than showing a broken control.
 let _bizCache = null;
+let _apiOnline = null;   // null until the first probe resolves
+
+function apiOnline() { return _apiOnline === true; }
+
+const BIZ_PLACEHOLDER = {
+  business_name: 'Your Business', industry: 'general business', agent_name: 'Ava',
+  booking: { appointment_label: 'appointment' }, promotion: { active: false },
+  services: [], faqs: [], hours: {},
+};
+
 async function getBusinessConfig() {
   if (_bizCache) return _bizCache;
+
   try {
     const res = await fetch('/api/business-config');
-    if (res.ok) _bizCache = await res.json();
-  } catch (_) { /* offline / not wired — fall back below */ }
-  _bizCache = _bizCache || {
-    business_name: 'Your Business', industry: 'general business', agent_name: 'Ava',
-    booking: { appointment_label: 'appointment' }, promotion: { active: false },
-    services: [], faqs: [], hours: {},
-  };
+    if (res.ok) { _bizCache = await res.json(); _apiOnline = true; }
+    else { _apiOnline = false; }
+  } catch (_) { _apiOnline = false; }
+
+  if (!_bizCache) {
+    try {
+      const res = await fetch('/business-config.json');
+      if (res.ok) _bizCache = await res.json();
+    } catch (_) { /* fall through to placeholders */ }
+  }
+
+  _bizCache = _bizCache || BIZ_PLACEHOLDER;
   return _bizCache;
 }
 
 async function saveBusinessConfig(config) {
+  if (!apiOnline()) throw new Error('static');
   const res = await fetch('/api/business-config', {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
