@@ -1,5 +1,7 @@
+import os
 from urllib.parse import urlsplit, urlunsplit, parse_qsl, urlencode
 
+from sqlalchemy.engine import make_url
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from app.core.config import settings
 
@@ -25,6 +27,34 @@ def normalize_db_url(url: str) -> str:
     )
 
 
+def relocate_unwritable_sqlite(url: str) -> str:
+    """
+    Point a SQLite file at /tmp when its directory can't be written to.
+
+    The zero-setup default is a relative path, which resolves inside the
+    deployment directory. That's fine locally but read-only on a serverless
+    host, and the failure is invisible at startup: create_async_engine() only
+    parses the URL, so the error doesn't surface until the first query, as a
+    503 on every database-backed endpoint. /tmp is the one writable location,
+    so a scratch database there keeps the app working out of the box. It is
+    per-container and disappears — real persistence needs DATABASE_URL.
+
+    Non-SQLite URLs and in-memory SQLite are returned unchanged.
+    """
+    try:
+        parsed = make_url(url)
+        if parsed.get_backend_name() != "sqlite" or not parsed.database:
+            return url
+        directory = os.path.dirname(os.path.abspath(parsed.database)) or "."
+        if os.access(directory, os.W_OK):
+            return url
+        relocated = os.path.join("/tmp", os.path.basename(parsed.database))
+        print(f"[db] {directory} is not writable — using {relocated}")
+        return str(parsed.set(database=relocated))
+    except Exception:
+        return url          # never let a URL quirk stop the app from starting
+
+
 def _build_engine():
     """
     Build the async engine without ever raising at import time.
@@ -37,7 +67,7 @@ def _build_engine():
     scratch SQLite file keeps the app importable so it can report the problem;
     endpoints that actually touch the database still fail loudly.
     """
-    url = normalize_db_url(settings.DATABASE_URL)
+    url = relocate_unwritable_sqlite(normalize_db_url(settings.DATABASE_URL))
     try:
         return create_async_engine(url, echo=False)
     except Exception as exc:

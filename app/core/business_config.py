@@ -145,8 +145,12 @@ async def load_business_config_from_db() -> BusinessConfig:
     """Overlay the dashboard-saved config, if any, onto the in-memory singleton."""
     from sqlalchemy import select
 
-    from app.db.database import AsyncSessionLocal
+    from app.db.database import AsyncSessionLocal, ensure_schema
     from app.db.models import Setting
+
+    # This runs from middleware, which can be the very first thing to touch the
+    # database — ahead of any request that goes through get_db().
+    await ensure_schema()
 
     async with AsyncSessionLocal() as db:
         result = await db.execute(select(Setting.value).where(Setting.key == _DB_KEY))
