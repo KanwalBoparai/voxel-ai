@@ -49,7 +49,35 @@ engine = _build_engine()
 AsyncSessionLocal = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
 
+_schema_checked = False
+
+
+async def ensure_schema() -> None:
+    """
+    Create missing tables once per process, on first database use.
+
+    main.py also does this from the lifespan hook, but serverless runtimes don't
+    reliably run ASGI lifespan events — on Vercel they don't fire at all, so the
+    tables were never created and every database-backed endpoint returned a 500.
+    Hanging the check off the first session instead means it runs wherever the
+    app is hosted.
+
+    Deploys that manage their schema out of band set AUTO_CREATE_TABLES=false
+    (see scripts/init_db.py). Failures are logged and not retried — a database
+    that is down shouldn't add a failed DDL round-trip to every later request.
+    """
+    global _schema_checked
+    if _schema_checked or not settings.AUTO_CREATE_TABLES:
+        return
+    _schema_checked = True
+    try:
+        await create_tables()
+    except Exception as exc:
+        print(f"[db] schema check failed: {exc}")
+
+
 async def get_db():
+    await ensure_schema()
     async with AsyncSessionLocal() as session:
         yield session
 

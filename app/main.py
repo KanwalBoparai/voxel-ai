@@ -1,5 +1,6 @@
 from fastapi import FastAPI, Request
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
+from sqlalchemy.exc import SQLAlchemyError
 from fastapi.staticfiles import StaticFiles
 from contextlib import asynccontextmanager
 
@@ -48,6 +49,35 @@ app.include_router(dashboard_router)     # /api/dashboard — overview + call lo
 
 # Static assets (css/js/images) for the marketing site + dashboard.
 app.mount("/assets", StaticFiles(directory=WEB_DIR / "assets"), name="assets")
+
+
+async def database_unavailable(request: Request, exc: Exception):
+    """
+    Answer database failures with a labelled 503 instead of a bare 500.
+
+    Without this, a missing or wrong DATABASE_URL surfaces as an opaque
+    "Internal Server Error" indistinguishable from a crashed deployment. The
+    dashboard already treats a failed data fetch as "show sample data", so a
+    clean status code keeps the UI working while naming the real problem.
+
+    Registered for ConnectionError as well as SQLAlchemyError: a refused TCP
+    connection reaches us as ConnectionRefusedError, never wrapped into a
+    SQLAlchemy type, so a SQLAlchemyError-only handler misses the single most
+    likely misconfiguration. ConnectionError is used rather than its parent
+    OSError so that unrelated filesystem errors keep their own reporting.
+    """
+    print(f"[db] {request.url.path} failed: {type(exc).__name__}: {exc}")
+    return JSONResponse(
+        status_code=503,
+        content={
+            "detail": "Database unavailable",
+            "hint": "Set DATABASE_URL, then create the schema with scripts/init_db.py.",
+        },
+    )
+
+
+app.add_exception_handler(SQLAlchemyError, database_unavailable)
+app.add_exception_handler(ConnectionError, database_unavailable)
 
 
 @app.middleware("http")
