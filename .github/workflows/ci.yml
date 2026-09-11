@@ -1,0 +1,78 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          # Matches PYTHON_VERSION in render.yaml and the Dockerfile base image.
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        # requirements-server.txt, not requirements.txt: the latter is scoped to
+        # the serverless bundle and excludes uvicorn.
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-server.txt -r requirements-dev.txt
+
+      - name: Import check
+        run: python -c "import app.main"
+        env:
+          AUTO_CREATE_TABLES: "false"
+
+      - name: Entrypoint check
+        # The serverless entrypoint imports differently from app.main and has
+        # broken on its own before.
+        run: python -c "import api.index"
+        env:
+          AUTO_CREATE_TABLES: "false"
+
+      - name: Run tests
+        run: pytest
+
+      - name: Offline smoke test
+        run: python tests/smoke_test.py
+
+  bundle-size:
+    # The serverless function is capped at 250 MB unzipped. Adding a heavy
+    # dependency silently breaks deploys, so measure it on every change.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Measure installed size
+        run: |
+          python -m venv /tmp/bundle
+          /tmp/bundle/bin/pip install --quiet -r requirements.txt
+          SIZE=$(du -sm /tmp/bundle/lib/python3.12/site-packages | cut -f1)
+          TOOLCHAIN=$(du -sm /tmp/bundle/lib/python3.12/site-packages/pip 2>/dev/null | cut -f1 || echo 0)
+          BUNDLE=$((SIZE - TOOLCHAIN))
+          echo "Function bundle: ${BUNDLE} MB (limit 250 MB)"
+          test "$BUNDLE" -lt 250
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build image
+        run: docker build -t voxel:ci .
+      - name: Container serves /health
+        run: |
+          docker run -d --name voxel-ci -p 8000:8000 \
+            -e DATABASE_URL=sqlite+aiosqlite:////tmp/ci.db voxel:ci
+          for i in $(seq 1 30); do
+            if curl -fsS http://localhost:8000/health; then echo " OK"; exit 0; fi
+            sleep 2
+          done
+          echo "health check never passed"; docker logs voxel-ci; exit 1

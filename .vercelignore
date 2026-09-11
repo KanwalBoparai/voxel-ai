@@ -25,7 +25,15 @@ tests/
 migrations/
 render.yaml
 requirements-server.txt
+requirements-dev.txt
+pytest.ini
 setup.sh
 *.md
 .git/
+.github/
 .claude/
+
+# Container build files — the serverless function doesn't use them.
+Dockerfile
+.dockerignore
+docker-compose.yml

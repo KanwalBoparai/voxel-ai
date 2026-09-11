@@ -8,9 +8,11 @@ A configurable, production-ready **AI voice agent platform** that answers calls,
 
 [Live demo](#-running-locally) · [Dashboard](#-the-dashboard) · [Configuration](#-configuration) · [Deployment](#-deployment)
 
+[![CI](https://github.com/KanwalBoparai/voxel/actions/workflows/ci.yml/badge.svg)](https://github.com/KanwalBoparai/voxel/actions/workflows/ci.yml)
 ![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?logo=fastapi&logoColor=white)
 ![Claude](https://img.shields.io/badge/Claude-Opus%204.8-8B5CF6?logo=anthropic&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-compose-2496ED?logo=docker&logoColor=white)
 ![License](https://img.shields.io/badge/License-MIT-4f46e5)
 
 </div>
@@ -95,9 +97,22 @@ If Google credentials aren't configured, the tools **degrade gracefully** — th
 
 ## 🚀 Installation
 
+### With Docker (Postgres included)
+
 ```bash
-git clone https://github.com/yourusername/voxel-ai.git
-cd voxel-ai
+docker compose up --build
+```
+
+Open <http://localhost:8000>. This brings up Postgres alongside the API, creates
+the schema, and runs the same driver the hosted deploy uses. `.env` is optional —
+without it the site still serves every page; only the agent (`ANTHROPIC_API_KEY`)
+and the Google integrations stay switched off.
+
+### Without Docker
+
+```bash
+git clone https://github.com/KanwalBoparai/voxel.git
+cd voxel
 ./setup.sh          # creates .venv, installs deps, copies .env.example → .env
 ```
 
@@ -105,8 +120,20 @@ Or manually:
 
 ```bash
 python3 -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
+pip install -r requirements-server.txt   # app deps + uvicorn
 cp .env.example .env
+```
+
+> `requirements.txt` holds only what the serverless function bundle needs, which
+> excludes the uvicorn server. Use `requirements-server.txt` to run the app as a
+> long-lived process, and add `requirements-dev.txt` for the test suite.
+
+### Tests
+
+```bash
+pip install -r requirements-server.txt -r requirements-dev.txt
+pytest                      # unit + deployment regression tests
+python tests/smoke_test.py  # offline end-to-end check, no API keys needed
 ```
 
 ---

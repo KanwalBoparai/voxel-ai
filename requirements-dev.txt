@@ -1,0 +1,7 @@
+# Test tooling. CI installs requirements-server.txt plus this file.
+#
+#   pip install -r requirements-server.txt -r requirements-dev.txt
+#   pytest -q
+
+pytest==8.3.3
+pytest-asyncio==0.24.0
